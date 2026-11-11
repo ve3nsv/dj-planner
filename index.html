@@ -329,7 +329,10 @@ const SECTIONS = [
   ['entrance', 'Grand entrance', 'How you and your wedding party are introduced into the reception.'],
   ['dinner', 'Dinner', 'Dinner service, the blessing, and the mood during the meal.'],
   ['speeches', 'Speeches & toasts', 'Who speaks, in what order, and who keeps the night moving.'],
-  ['dances', 'Formal dances', 'Your first dance, parent dances and the other spotlight moments.'],
+  ['dances', 'Formal dances', 'Your first dance, parent dances and the other spotlight dances.'],
+  ['cake', 'Cake cutting', 'When you cut the cake and what plays while you do.'],
+  ['garter', 'Garter toss', 'Music for the garter removal and toss.'],
+  ['bouquet', 'Bouquet toss', 'Music for the bouquet toss.'],
   ['traditions', 'Traditions & add-ons', 'Cultural moments, games, and any extras you booked.'],
   ['music', 'Music preferences', 'The sound of your dance floor: what to play lots of, and what to avoid.'],
   ['vendors', 'Vendors', 'The team we will coordinate with on the day.'],
@@ -338,11 +341,14 @@ const SECTIONS = [
 const GENRES = ['Current hits','2010s','2000s','90s','80s','70s, Motown & disco','Hip hop & rap','R&B','Rock & alternative','Country','Latin','EDM & house','Afrobeats & dancehall','Bollywood & bhangra','Line dances','Rat Pack & oldies'];
 const GLEVELS = ['Lots','Some','Little','None'];
 const TRADITIONS = ['Hora','Money / dollar dance','Shoe game','Anniversary dance','Baraat','Sangeet performances','Tea ceremony','Grand march','Sparkler or cold-spark send-off','Bouquet & garter combined','Choreographed dance','Surprise performance'];
-const TIMELINE_PRESET = [
+const FIRST_WHEN = ['Right after our grand entrance', 'With the other formal dances'];
+const timelinePreset = firstAfter => [
   ['15:00','Guests arrive','Pre-ceremony music'], ['15:30','Ceremony begins',''], ['16:00','Cocktail hour','Photos with couple'],
-  ['17:15','Grand entrance',''], ['17:30','Dinner service',''], ['18:45','Speeches & toasts',''],
-  ['19:15','Cake cutting',''], ['19:25','First dance',''], ['19:30','Parent dances',''],
-  ['19:40','Dance floor opens',''], ['22:00','Late-night snack',''], ['23:45','Last dance',''], ['00:00','Send-off','']
+  ['17:15','Grand entrance',''], ...(firstAfter ? [['17:20','First dance','Straight from the grand entrance']] : []),
+  ['17:30','Dinner service',''], ['18:45','Speeches & toasts',''],
+  ...(firstAfter ? [] : [['19:15','First dance','']]), ['19:20','Parent dances',''],
+  ['19:30','Cake cutting',''], ['19:40','Garter toss',''], ['19:45','Bouquet toss',''],
+  ['19:50','Dance floor opens',''], ['22:00','Late-night snack',''], ['23:45','Last dance',''], ['00:00','Send-off','']
 ];
 
 /* ---------- state ---------- */
@@ -470,7 +476,7 @@ R.entrance = () => {
   if (!on) return card('Grand entrance', head);
   const coupleOnly = get(ev, 'entrance.style') === 'Couple only';
   const mode = get(ev, 'entrance.songMode') || EMODES[0];
-  let h = card('Grand entrance', head + `<div class="grid" style="margin-top:14px">${F('entrance.style','Format','select',{opts:['Wedding party, then the couple','Couple only','Everyone together, one song'],full:true})}${F('entrance.coupleSong','Couple’s entrance song','song')}${F('entrance.intro','How should we introduce you?','text',{ph:'e.g. For the first time as a married couple…'})}</div>`);
+  let h = card('Grand entrance', head + `<div class="grid" style="margin-top:14px">${F('entrance.style','Format','select',{opts:['Wedding party, then the couple','Couple only','Everyone together, one song'],full:true})}${F('entrance.coupleSong','Couple’s entrance song','song')}${F('entrance.intro','How should we introduce you?','text',{ph:'e.g. For the first time as a married couple…'})}${F('dances.first.when','When is your first dance?','seg',{opts:FIRST_WHEN,full:true,help:get(ev,'dances.first.when') === FIRST_WHEN[0] ? 'Your first dance starts as soon as you’re introduced. Pick the song in Formal dances.' : 'You can also go straight from your entrance into your first dance.'})}</div>`);
   if (coupleOnly) return h;
   let music = `<div class="fld"><span class="lbl">How should the wedding party’s music work?</span>${seg('entrance.songMode', EMODES, mode)}</div>`;
   if (mode === EMODES[0]) music += `<div class="grid" style="margin-top:12px">${F('entrance.partySong','Wedding party song','song',{help:'One song plays while everyone in the list below is introduced.'})}</div>`;
@@ -492,11 +498,14 @@ R.speeches = () => card('Master of ceremonies', `<div class="grid">${F('speeches
   ], { numbered: true, add: 'Add speaker', empty: 'Add speakers in the order they will speak.' }), 'In speaking order') +
   card('Toast & presentations', M('speeches.toast','A toast to the couple','', F('speeches.toast.by','Toast by')+F('speeches.toast.notes','Notes')) + M('speeches.slides','Slideshow or video','We’ll need a screen and audio hookup.', F('speeches.slides.when','When','text')+F('speeches.slides.source','Plays from','select',{opts:['Laptop (HDMI)','USB stick','Venue AV system']})+F('speeches.slides.notes','Notes','text',{full:true})));
 R.dances = () => {
-  const d = (k, t, desc, who) => M('dances.' + k, t, desc, (who ? F(`dances.${k}.who`,'Who') : '') + F(`dances.${k}.song`,'Song','song') + F(`dances.${k}.edit`,'Length','select',{opts:['Full song','Fade around 1:30','Fade around 2:00','Fade around 2:30','Custom (see notes)']}) + F(`dances.${k}.notes`,'Notes','text',{ph:'Invite guests to join halfway, etc.'}));
-  return card('Spotlight dances', d('first','Couple’s first dance','') + d('parent1','Parent dance','e.g. Bride & father', true) + d('parent2','Second parent dance','e.g. Groom & mother', true) + d('party','Wedding party dance','') + d('anniv','Anniversary dance','Couples leave the floor by years married.') + d('last','Last dance of the evening','')) +
-    card('Other moments', M('dances.cake','Cake cutting','', F('dances.cake.when','When','select',{opts:['After dinner','Before dinner','During dancing','Late-night']})+F('dances.cake.song','Song','song')) + M('dances.bouquet','Bouquet toss','', F('dances.bouquet.song','Song','song')+F('dances.bouquet.notes','Notes')) + M('dances.garter','Garter toss','', F('dances.garter.song','Song','song')+F('dances.garter.notes','Notes')) + M('dances.money','Money / dollar dance','', F('dances.money.song','Song','song')+F('dances.money.notes','Notes'))) +
+  const lengths = {opts:['Full song','Fade around 1:30','Fade around 2:00','Fade around 2:30','Custom (see notes)']};
+  const d = (k, t, desc, who, pre = '') => M('dances.' + k, t, desc, pre + (who ? F(`dances.${k}.who`,'Who') : '') + F(`dances.${k}.song`,'Song','song') + F(`dances.${k}.edit`,'Length','select',lengths) + F(`dances.${k}.notes`,'Notes','text',{ph:'Invite guests to join halfway, etc.'}));
+  return card('Spotlight dances', d('first','Couple’s first dance','', false, F('dances.first.when','When is your first dance?','seg',{opts:FIRST_WHEN,full:true})) + d('parent1','Parent dance','e.g. Bride & father', true) + d('parent2','Second parent dance','e.g. Groom & mother', true) + d('party','Wedding party dance','') + d('anniv','Anniversary dance','Couples leave the floor by years married.') + d('money','Money / dollar dance','') + d('last','Last dance of the evening','')) +
     card('Other special dances', L('dances.extra', [{ k: 'who', l: 'Who' }, { k: 'song', l: 'Song', t: 'song' }, { k: 'when', l: 'When', ph: 'After parent dances' }], { add: 'Add dance', empty: 'Grandparents, siblings, a surprise dance — add them here.' }));
 };
+R.cake = () => card('Cake cutting', M('dances.cake','Will you have a cake cutting?','', F('dances.cake.when','When','select',{opts:['After dinner','After the formal dances','Before dinner','During dancing','Late-night']}) + F('dances.cake.song','Song','song') + F('dances.cake.announce','Announcement','select',{opts:['Announce it so guests gather','Low-key, no announcement']}) + F('dances.cake.notes','Notes','text')));
+R.garter = () => card('Garter toss', M('dances.garter','Will you have a garter toss?','', F('dances.garter.removal','Garter removal song','song',{ph:'Optional'}) + F('dances.garter.song','Garter toss song','song') + F('dances.garter.who','Who is invited up','text',{ph:'e.g. All single guests'}) + F('dances.garter.notes','Notes','text')));
+R.bouquet = () => card('Bouquet toss', M('dances.bouquet','Will you have a bouquet toss?','', F('dances.bouquet.song','Bouquet toss song','song') + F('dances.bouquet.who','Who is invited up','text',{ph:'e.g. All single guests'}) + F('dances.bouquet.notes','Notes','text',{full:true})));
 R.traditions = () => card('Traditions & games', `<div class="grid">${TRADITIONS.map(t => F('traditions.items.' + slug(t), t, 'check')).join('')}</div><div style="margin-top:12px">${F('traditions.notes','Details','textarea',{full:true,rows:3,ph:'Songs, timing and who is involved for each tradition'})}</div>`) +
   card('Add-ons', M('traditions.uplight','Uplighting','', F('traditions.uplight.color','Colour','text',{ph:'e.g. Blush, gold, match the florals'})+F('traditions.uplight.where','Where','text')) + M('traditions.monogram','Monogram projection','', F('traditions.monogram.text','Text','text',{ph:'Initials & date'})+F('traditions.monogram.where','Where','text')) + M('traditions.booth','Photo booth','', F('traditions.booth.hours','Hours','text')+F('traditions.booth.backdrop','Backdrop','text')) + M('traditions.sparks','Cold sparks','', F('traditions.sparks.when','Moment','text',{ph:'First dance, entrance…'})+F('traditions.sparks.notes','Notes','text')) + M('traditions.clouds','Dancing on the clouds','Low-lying fog for the first dance.', F('traditions.clouds.notes','Notes','text',{full:true})));
 R.music = () => {
@@ -544,12 +553,19 @@ function runSheet(e){
     }
     add('Grand entrance — couple', g('entrance.intro'), g('entrance.coupleSong'), '');
   }
+  const firstAfter = g('dances.first.when') === FIRST_WHEN[0];
+  const dance = (k, l) => { if (g(`dances.${k}.on`)) add(l, g(`dances.${k}.who`) || g(`dances.${k}.when`), g(`dances.${k}.song`), [g(`dances.${k}.edit`), g(`dances.${k}.announce`), g(`dances.${k}.notes`)].filter(Boolean).join('; ')); };
+  if (firstAfter) dance('first', 'First dance (right after entrance)');
   add('Dinner', g('dinner.style'), g('dinner.music'), [g('dinner.djMeal') && 'DJ meal: ' + g('dinner.djMeal'), g('dinner.notes')].filter(Boolean).join('; '));
   if (g('dinner.blessing.on')) add('Blessing', g('dinner.blessing.by'), '', g('dinner.blessing.notes'));
   if (g('speeches.toast.on')) add('Toast', g('speeches.toast.by'), '', g('speeches.toast.notes'));
-  const dn = { first: 'First dance', parent1: 'Parent dance', parent2: 'Parent dance', party: 'Wedding party dance', anniv: 'Anniversary dance', cake: 'Cake cutting', bouquet: 'Bouquet toss', garter: 'Garter toss', money: 'Money dance', last: 'Last dance' };
-  Object.entries(dn).forEach(([k, l]) => { if (g(`dances.${k}.on`)) add(l, g(`dances.${k}.who`) || g(`dances.${k}.when`), g(`dances.${k}.song`), [g(`dances.${k}.edit`), g(`dances.${k}.notes`)].filter(Boolean).join('; ')); });
+  if (!firstAfter) dance('first', 'First dance');
+  [['parent1','Parent dance'],['parent2','Parent dance'],['party','Wedding party dance'],['anniv','Anniversary dance'],['money','Money dance']].forEach(([k, l]) => dance(k, l));
+  dance('cake', 'Cake cutting');
+  if (g('dances.garter.on')) { if (g('dances.garter.removal')) add('Garter removal', '', g('dances.garter.removal'), ''); add('Garter toss', g('dances.garter.who'), g('dances.garter.song'), g('dances.garter.notes')); }
+  if (g('dances.bouquet.on')) add('Bouquet toss', g('dances.bouquet.who'), g('dances.bouquet.song'), g('dances.bouquet.notes'));
   (g('dances.extra') || []).forEach(r => add('Special dance', r.who, r.song, r.when));
+  dance('last', 'Last dance');
   h += `<h3>Music cues</h3><div class="rs-scroll"><table><thead><tr><th>Moment</th><th>Who / details</th><th>Song</th><th>Notes</th></tr></thead><tbody>${cues.map(c => `<tr><td><b>${esc(c[0])}</b></td><td>${v(c[1])}</td><td>${v(c[2])}</td><td>${v(c[3])}</td></tr>`).join('')}</tbody></table></div>`;
   const intros = g('entrance.on') && !eCoupleOnly ? (g('entrance.intros') || []) : [];
   if (intros.length) h += `<h3>Introductions (in order)</h3><table><tbody>${intros.map((r, i) => `<tr><td class="t">${i + 1}</td><td><b>${esc(r.names)}</b>${r.say ? ` <i>(${esc(r.say)})</i>` : ''}</td><td>${v(r.role)}</td>${emode === EMODES[1] ? `<td>${v(r.group)}</td>` : emode === EMODES[2] ? `<td>${v(r.song)}</td>` : ''}</tr>`).join('')}</tbody></table>`;
@@ -740,12 +756,12 @@ document.addEventListener('click', async e => {
   if (b.disabled) return;
   switch (a){
     case 'yn': put(ev, k, b.dataset.v === 'true'); markDirty(k); renderMain(); break;
-    case 'seg': put(ev, k, get(ev, k) === b.dataset.v && !k.startsWith('lock') && k !== 'entrance.songMode' ? '' : b.dataset.v); markDirty(k); renderMain(); if (k.startsWith('lock')) renderBanners(); break;
+    case 'seg': put(ev, k, get(ev, k) === b.dataset.v && !k.startsWith('lock') && k !== 'entrance.songMode' && k !== 'dances.first.when' ? '' : b.dataset.v); if (k === 'dances.first.when') put(ev, 'dances.first.on', true); markDirty(k); renderMain(); if (k.startsWith('lock')) renderBanners(); break;
     case 'add': { const arr = get(ev, k) || []; arr.push({}); put(ev, k, arr); markDirty(k); renderMain(); const rows = document.querySelectorAll('#main .lrow'); const last = [...rows].filter(r => r.querySelector(`[data-k^="${k}."]`)).pop(); last && last.querySelector('input,select') && last.querySelector('input,select').focus(); break; }
     case 'del': { const arr = get(ev, k); arr.splice(i, 1); markDirty(k); renderMain(); break; }
     case 'up': case 'down': { const arr = get(ev, k); const j = a === 'up' ? i - 1 : i + 1; [arr[i], arr[j]] = [arr[j], arr[i]]; markDirty(k); renderMain(); break; }
     case 'egroups': { const arr = get(ev, 'entrance.groups') || []; EGROUPS.forEach(name => arr.push({ name })); put(ev, 'entrance.groups', arr); markDirty('entrance'); renderMain(); break; }
-    case 'preset': { const arr = get(ev, 'timeline.items') || []; TIMELINE_PRESET.forEach(([time, what, notes]) => arr.push({ time, what, notes })); put(ev, 'timeline.items', arr); markDirty('timeline'); renderMain(); break; }
+    case 'preset': { const arr = get(ev, 'timeline.items') || []; timelinePreset(get(ev, 'dances.first.when') === FIRST_WHEN[0]).forEach(([time, what, notes]) => arr.push({ time, what, notes })); put(ev, 'timeline.items', arr); markDirty('timeline'); renderMain(); break; }
     case 'sort': { const key = t => { if (!t) return 9999; const [h, m] = t.split(':').map(Number); return (h < 6 ? h + 24 : h) * 60 + m; }; get(ev, 'timeline.items').sort((x, y) => key(x.time) - key(y.time)); markDirty('timeline'); renderMain(); break; }
     case 'done': put(ev, 'done.' + section, !get(ev, 'done.' + section)); markDirty('done'); renderPlanner(); break;
     case 'nav': section = b.dataset.s; store.set('djp-sec-' + evId, section); confirmDel = false; renderPlanner(); window.scrollTo({ top: 0 }); break;
