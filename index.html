@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Wedding DJ Planner</title>
+<title>ThunderStorm Wedding Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
@@ -347,7 +347,7 @@ const TIMELINE_PRESET = [
 
 /* ---------- state ---------- */
 let db = null, downloads = null, isDJ = false, previewCouple = false;
-let brand = { name: 'Your DJ Company', tagline: 'Wedding music planner', color: '#6b2d5c', logo: '', email: '', phone: '', lockDays: 14 };
+let brand = { name: 'ThunderStorm Productions', tagline: 'Wedding music planner', color: '#6b2d5c', logo: '', email: '', phone: '', lockDays: 14 };
 let events = [], eventsLoaded = false, unsubEvents = null;
 let ev = null, evId = null, unsubEv = null, section = 'overview';
 let lastWrite = '', dirty = new Set(), saving = false, saveTimer = null, saveState = '', needsRender = false;
@@ -753,7 +753,7 @@ document.addEventListener('submit', async e => {
   if (e.target.id === 'brandForm'){
     const f = $('#b_logo').files[0];
     if (f) brand.logo = await shrinkLogo(f);
-    Object.assign(brand, { name: $('#b_name').value.trim() || 'Your DJ Company', tagline: $('#b_tag').value.trim(), color: $('#b_color').value, email: $('#b_email').value.trim(), phone: $('#b_phone').value.trim(), lockDays: Number($('#b_lock').value) || 0 });
+    Object.assign(brand, { name: $('#b_name').value.trim() || 'ThunderStorm Productions', tagline: $('#b_tag').value.trim(), color: $('#b_color').value, email: $('#b_email').value.trim(), phone: $('#b_phone').value.trim(), lockDays: Number($('#b_lock').value) || 0 });
     try { await db.doc('settings/brand').set(brand); applyBrand(); showBrand = false; renderDash(); }
     catch { $('#b_msg').textContent = 'Couldn’t save branding. Only editors of this artifact can change it.'; }
   }
