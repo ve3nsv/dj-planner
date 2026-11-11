@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wedding DJ Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky brand bar + left section rail (chip strip on phones) + one working column of cards; dashboard is a single dense event table. */
+:root{
+  --brand:#6b2d5c;
+  --accent:var(--brand);
+  --on-brand:#ffffff;
+  --bg:#f5f3f6; --surface:#ffffff; --surface-2:#faf8fb; --line:#e5dfe7; --line-2:#d3cad6;
+  --fg:#1c161f; --muted:#6a6070; --tint:color-mix(in oklab,var(--brand) 9%,var(--surface));
+  --ok:#2c7a4b; --ok-bg:#e5f3ea; --warn:#9a5806; --warn-bg:#fbefdc; --danger:#b3261e; --danger-bg:#fbe7e5;
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --accent:color-mix(in oklab,var(--brand) 48%,#fff);
+  --bg:#131015; --surface:#1c171f; --surface-2:#221c25; --line:#342c38; --line-2:#463c4b;
+  --fg:#efe9f1; --muted:#a69ca9; --tint:color-mix(in oklab,var(--brand) 22%,var(--surface));
+  --ok:#73c995; --ok-bg:#1d3326; --warn:#e3aa55; --warn-bg:#3a2b14; --danger:#f1918a; --danger-bg:#3d1f1d;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --accent:color-mix(in oklab,var(--brand) 48%,#fff);
+  --bg:#131015; --surface:#1c171f; --surface-2:#221c25; --line:#342c38; --line-2:#463c4b;
+  --fg:#efe9f1; --muted:#a69ca9; --tint:color-mix(in oklab,var(--brand) 22%,var(--surface));
+  --ok:#73c995; --ok-bg:#1d3326; --warn:#e3aa55; --warn-bg:#3a2b14; --danger:#f1918a; --danger-bg:#3d1f1d;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+h1,h2,h3,h4{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.muted{color:var(--muted)}
+.tnum{font-variant-numeric:tabular-nums}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* Top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;gap:16px;padding-block:12px;max-width:1240px;margin:0 auto;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;text-decoration:none;color:inherit}
+.brand img{max-height:40px;width:auto;max-width:180px;display:block}
+.mark{width:36px;height:36px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;font:700 15px var(--f-display);flex:none}
+.brand-name{font:700 16px/1.15 var(--f-display)}
+.brand-tag{font-size:12px;color:var(--muted)}
+.top-mid{flex:1;min-width:0;display:flex;flex-direction:column}
+.couple{font:700 19px/1.2 var(--f-display);overflow-wrap:anywhere}
+.top-meta{font-size:13px;color:var(--muted)}
+.count{display:flex;align-items:baseline;gap:8px;text-align:right}
+.count b{font:700 34px/1 var(--f-display);color:var(--accent);font-variant-numeric:tabular-nums}
+.count span{font-size:13px;color:var(--muted);max-width:7em;line-height:1.2}
+.save{font-size:12px;color:var(--muted);min-width:9ch;text-align:right}
+.save.err{color:var(--danger)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--surface);border-radius:8px;padding:7px 13px;cursor:pointer;font-weight:500;font-size:14px;text-decoration:none;color:var(--fg);white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--fg);border-color:var(--line)}
+.btn.danger{color:var(--danger);border-color:color-mix(in oklab,var(--danger) 40%,var(--line))}
+.btn.sm{padding:4px 9px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.icon-btn{border:0;background:transparent;width:30px;height:30px;border-radius:6px;cursor:pointer;color:var(--muted);display:grid;place-items:center;font-size:15px}
+.icon-btn:hover{background:var(--surface-2);color:var(--fg)}
+
+/* Banners */
+.banner{max-width:1240px;margin:12px auto 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-radius:var(--r);font-size:14px}
+.banner.lock{background:var(--warn-bg);color:var(--warn)}
+.banner.info{background:var(--tint);color:var(--fg)}
+.banner .btn{margin-left:auto}
+
+/* Planner layout */
+.shell{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:232px minmax(0,1fr);gap:28px;padding-block:22px 80px}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 86px);align-self:start;display:flex;flex-direction:column;gap:2px}
+.rail .prog{padding:4px 10px 14px}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--brand);border-radius:3px}
+.rail .prog small{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+.navi{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;text-align:left;padding:7px 10px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:14px}
+.navi:hover{background:var(--surface);color:var(--fg)}
+.navi[aria-current="true"]{background:var(--surface);color:var(--fg);font-weight:600;box-shadow:inset 0 0 0 1px var(--line)}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line-2);flex:none}
+.dot.done{background:var(--ok);border-color:var(--ok)}
+.navi.rs{margin-top:10px;border-top:1px solid var(--line);border-radius:0;padding-top:14px}
+.main{min-width:0;max-width:880px}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.sec-head h2{font-size:28px}
+.sec-head p{margin:4px 0 0;color:var(--muted);max-width:60ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:14px}
+.card>h3{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card>h3 .muted{font:400 13px var(--f-body)}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+
+/* Fields */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld.full{grid-column:1/-1}
+.lbl{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.help{font-size:12px;color:var(--muted)}
+input[type=text],input[type=email],input[type=tel],input[type=date],input[type=time],input[type=number],input[type=url],select,textarea{width:100%;min-width:0;border:1px solid var(--line-2);background:var(--surface-2);border-radius:7px;padding:8px 10px;font-size:14px}
+input[type=time]{font-family:var(--f-mono);font-size:13px}
+textarea{resize:vertical;line-height:1.5}
+input:hover,select:hover,textarea:hover{border-color:color-mix(in oklab,var(--accent) 45%,var(--line-2))}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in oklab,var(--accent) 20%,transparent);background:var(--surface)}
+fieldset:disabled input,fieldset:disabled select,fieldset:disabled textarea{background:transparent;border-style:dashed}
+.chk{display:flex;gap:9px;align-items:flex-start;cursor:pointer;font-size:14px;padding:4px 0}
+.chk input{width:17px;height:17px;margin:2px 0 0;accent-color:var(--brand);flex:none}
+.song{display:flex;gap:6px;align-items:center}
+.song input{flex:1}
+.spot{font-size:12px;color:var(--accent);white-space:nowrap;text-decoration:none;font-weight:600}
+.spot:hover{text-decoration:underline}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;background:var(--surface-2);width:max-content;max-width:100%}
+.seg button{border:0;background:transparent;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--muted);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand);font-weight:600}
+.seg button:not([aria-pressed="true"]):hover{color:var(--fg);background:var(--tint)}
+
+/* Moments (yes/no rows that open) */
+.moment{border-top:1px solid var(--line);padding:13px 0}
+.moment:first-of-type{border-top:0;padding-top:2px}
+.mhead{display:flex;justify-content:space-between;gap:14px;align-items:center}
+.mhead h4{font:600 15px var(--f-body)}
+.mhead p{margin:1px 0 0;font-size:13px}
+.mbody{margin-top:12px;padding:14px;border-radius:8px;background:var(--tint)}
+.mbody input,.mbody select,.mbody textarea{background:var(--surface)}
+
+/* Lists */
+.list{display:flex;flex-direction:column;gap:6px}
+.lhead,.lrow{display:grid;grid-template-columns:var(--cols);gap:8px;align-items:center}
+.lhead{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;padding:0 2px}
+.lrow .num{font:500 12px var(--f-mono);color:var(--muted);text-align:center}
+.lact{display:flex;gap:0}
+.cl{display:none;font-size:11px;font-weight:600;color:var(--muted)}
+.cell{min-width:0}
+.empty{padding:18px;border:1px dashed var(--line-2);border-radius:8px;color:var(--muted);font-size:14px;text-align:center}
+.ladd{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+
+/* Genre grid */
+.genres{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 22px}
+.genre{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--line)}
+.genre span{font-size:14px}
+.genre .seg button{padding:4px 9px;font-size:12px}
+
+.secfoot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px}
+.done-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ok);background:var(--ok-bg);padding:3px 10px;border-radius:99px}
+
+/* DJ controls */
+.dj{border-color:color-mix(in oklab,var(--brand) 35%,var(--line));background:var(--tint)}
+.dj input,.dj select{background:var(--surface)}
+.code{font:500 13px var(--f-mono);background:var(--surface);border:1px solid var(--line-2);padding:6px 10px;border-radius:6px;user-select:all;overflow-wrap:anywhere}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* Dashboard */
+.dash{max-width:1240px;margin:0 auto;padding-block:26px 80px}
+.dash-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.dash-head h1{font-size:34px}
+.stats{display:flex;gap:28px;flex-wrap:wrap;margin:6px 0 0;color:var(--muted);font-size:14px}
+.stats b{color:var(--fg);font:700 20px var(--f-display);margin-right:5px}
+.tbl-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);font-weight:600}
+td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:14px}
+tr:last-child td{border-bottom:0}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--surface-2)}
+td .who{font-weight:600}
+td .bar{width:110px;display:inline-block;vertical-align:middle;margin-right:8px}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.pill.plan{background:var(--tint);color:var(--accent)}
+.pill.lock{background:var(--warn-bg);color:var(--warn)}
+.pill.ready{background:var(--ok-bg);color:var(--ok)}
+.pill.past{background:var(--surface-2);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)}
+.pill.risk{background:var(--danger-bg);color:var(--danger)}
+.sample{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line-2);border-radius:4px;padding:0 5px;margin-left:6px;letter-spacing:.04em}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:18px}
+.panel h2{font-size:20px;margin-bottom:14px}
+.logo-prev{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.logo-prev img{max-height:48px;max-width:200px;background:var(--surface-2);border-radius:6px;padding:4px}
+input[type=color]{width:48px;height:36px;border:1px solid var(--line-2);border-radius:7px;padding:2px;background:var(--surface-2)}
+
+/* States */
+.state{max-width:520px;margin:12vh auto;text-align:center;padding:0 16px}
+.state h2{font-size:24px;margin-bottom:8px}
+.spinner{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;margin:0 auto 14px;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+
+/* Run sheet */
+.rs h3{font-size:15px;margin:22px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--brand);color:var(--fg)}
+.rs h3:first-child{margin-top:0}
+.rs table{min-width:0;font-size:14px}
+.rs td,.rs th{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.rs .t{font-family:var(--f-mono);font-size:13px;white-space:nowrap;width:1%}
+.rs .k{color:var(--muted);width:32%}
+.rs .none{color:var(--muted);font-style:italic}
+.rs-scroll{overflow-x:auto}
+.rs p{margin:4px 0;white-space:pre-wrap}
+
+/* Phones */
+@media (max-width:860px){
+  .top{position:static}
+  .top-in{gap:8px 14px}
+  .top-mid{order:5;flex-basis:100%}
+  .brand-tag{display:none}
+  .brand img{max-height:32px}
+  .count{margin-left:auto}
+  .save{display:none}
+  .shell{grid-template-columns:minmax(0,1fr);gap:14px;padding-top:0}
+  .rail{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;flex-direction:row;overflow-x:auto;background:var(--bg);margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-left,0px));gap:6px;border-bottom:1px solid var(--line);scrollbar-width:none}
+  .rail .prog{display:none}
+  .navi{white-space:nowrap;width:auto;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);padding:6px 11px}
+  .navi[aria-current="true"]{box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .navi.rs{margin:0;border:0;border-radius:7px;padding-top:6px}
+  .grid,.grid.g3,.genres{grid-template-columns:minmax(0,1fr)}
+  .lhead{display:none}
+  .lrow{grid-template-columns:minmax(0,1fr)!important;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px}
+  .lrow .num{text-align:left}
+  .cl{display:block;margin-bottom:3px}
+  .lact{justify-content:flex-end}
+  .count b{font-size:26px}
+  .card{padding:16px}
+  .sec-head h2{font-size:24px}
+}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<script>/* Standalone demo shim: stores planner data in this browser (localStorage) instead of a server. */
+(function(){
+  var KEY='djp-demo-db-v1', mem=null;
+  function load(){ if(mem) return mem; try{ mem=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){} if(!mem){ mem={"events/samplemc01": {"sample": true, "createdAt": "2026-11-11T12:00:00.000Z", "updatedAt": "2026-11-11T12:00:00.000Z", "general": {"p1": {"name": "Maya Chen", "role": "Bride", "email": "maya@example.com", "phone": "555-0142", "pron": "MY-uh"}, "p2": {"name": "Daniel Ortiz", "role": "Groom", "email": "daniel@example.com", "phone": "555-0187"}, "date": "2026-12-12", "guests": "140", "ages": "Mostly 20s\u201330s", "partyArrival": "14:30", "guestArrival": "15:00", "receptionStart": "17:00", "receptionEnd": "00:30", "coordinator": "Rachel (planner) 555-0199"}, "timeline": {"items": [{"time": "15:00", "what": "Guests arrive", "notes": "Acoustic pre-ceremony set"}, {"time": "15:30", "what": "Ceremony begins", "notes": "Garden terrace"}, {"time": "16:00", "what": "Cocktail hour", "notes": "Couple photos at the barn"}, {"time": "17:15", "what": "Grand entrance", "notes": ""}, {"time": "17:30", "what": "Dinner service", "notes": ""}, {"time": "18:45", "what": "Speeches & toasts", "notes": ""}, {"time": "19:15", "what": "Cake cutting", "notes": ""}, {"time": "19:25", "what": "First dance", "notes": ""}, {"time": "19:30", "what": "Parent dances", "notes": ""}, {"time": "19:40", "what": "Dance floor opens", "notes": ""}, {"time": "00:15", "what": "Last dance", "notes": "Sparkler exit after"}]}, "venues": {"ceremony": {"name": "Willow Creek Estate", "room": "Garden terrace", "address": "100 Sample Road, Springfield", "contact": "Venue coordinator", "setting": "Outdoor", "elevator": "Not needed (ground level)", "rain": "Moves into the barn"}, "reception": {"same": true}, "setup": {"loadIn": "12:00", "stairs": "None", "power": "Yes", "generator": "No", "table": "Yes", "tent": "Not needed", "parking": "Use the service lane behind the barn.", "curfew": "00:30"}}, "ceremony": {"on": true, "start": "15:30", "end": "16:00", "officiant": "Rev. Sam Patel", "mics": "Lapel + handheld for readers", "readers": "2", "vows": "Yes, guests should hear the vows", "pre": {"on": true, "style": "Acoustic covers"}, "proc": {"on": true, "party": "A Thousand Years \u2013 The Piano Guys", "couple": "Canon in D \u2013 Pachelbel", "notes": "Switch songs when the flower girl reaches the front"}, "registry": {"on": true, "song": "Lucky \u2013 Jason Mraz & Colbie Caillat"}, "rec": {"on": true, "song": "Signed, Sealed, Delivered \u2013 Stevie Wonder"}}, "cocktail": {"on": true, "where": "Barn patio", "style": "Jazz & swing", "start": "16:00", "end": "17:15"}, "entrance": {"on": true, "style": "Wedding party, then the couple", "partySong": "Uptown Funk \u2013 Mark Ronson ft. Bruno Mars", "coupleSong": "Crazy in Love \u2013 Beyonc\u00e9", "intro": "For the first time as a married couple, Maya and Daniel!", "intros": [{"names": "Lena Park & Marcus Reid", "role": "Bridesmaid & groomsman"}, {"names": "Jo Alvarez & Theo Grant", "role": "Bridesmaid & groomsman", "say": "THAY-oh"}, {"names": "Priya Nair & Chris Ortiz", "role": "Maid of honour & best man"}]}, "dinner": {"style": "Plated / individually served", "start": "17:30", "djMeal": "Yes", "music": "Soft jazz & acoustic", "order": "Head table, then by table number", "blessing": {"on": false}}, "speeches": {"mc": "The DJ", "when": "After dinner", "length": "15\u201330 minutes", "speakers": [{"name": "Michael Chen", "rel": "Father of the bride", "mic": "Handheld"}, {"name": "Priya Nair", "rel": "Maid of honour", "mic": "Handheld"}, {"name": "Chris Ortiz", "rel": "Best man", "mic": "Handheld"}], "toast": {"on": false}}, "dances": {"first": {"on": true, "song": "Nothing Can Change This Love \u2013 Sam Cooke", "edit": "Fade around 2:30", "notes": "Invite guests to join for the last chorus"}, "parent1": {"on": true, "who": "Bride & father", "song": "What a Wonderful World \u2013 Louis Armstrong", "edit": "Fade around 1:30"}, "parent2": {"on": true, "who": "Groom & mother", "song": "That's Amore \u2013 Dean Martin", "edit": "Fade around 2:00"}, "cake": {"on": true, "when": "After dinner", "song": "Sugar, Sugar \u2013 The Archies"}, "last": {"on": true, "song": "Don't Stop Believin' \u2013 Journey"}, "extra": []}, "traditions": {"items": {"sparkler-or-cold-spark-send-off": true, "anniversary-dance": false}, "uplight": {"on": true, "color": "Warm amber", "where": "Around the barn walls"}}, "music": {"genres": {"2000s": "Lots", "current-hits": "Lots", "r-b": "Lots", "hip-hop-rap": "Some", "90s": "Some", "country": "None", "edm-house": "None", "line-dances": "Little"}, "vibe": "Sing-along dance floor. Early 2000s R&B and pop, boy bands, and this summer's big hits. One or two classics for the parents.", "requests": "Yes, but use your judgment", "clean": "Explicit is fine after dinner", "must": [{"song": "Yeah!", "artist": "Usher"}, {"song": "I Want It That Way", "artist": "Backstreet Boys", "note": "Group sing-along"}, {"song": "Mr. Brightside", "artist": "The Killers", "note": "Late night"}], "maybe": [{"song": "Pink Pony Club", "artist": "Chappell Roan"}], "dnp": [{"song": "Chicken Dance"}, {"song": "Cha Cha Slide", "note": "Even if asked"}]}, "vendors": {"list": [{"role": "Planner / coordinator", "name": "Rachel \u2014 Sample Events Co.", "phone": "555-0199"}, {"role": "Photographer", "name": "Sample Photo Studio", "phone": "555-0120"}]}, "notes": {"text": "This is a sample planner with made-up details, to show how a completed planner looks."}, "done": {"overview": true, "timeline": true, "ceremony": true, "dances": true, "music": true}, "lock": {"mode": "auto"}, "summary": {"p1": "Maya Chen", "p2": "Daniel Ortiz", "date": "2026-12-12", "venue": "Willow Creek Estate", "guests": "140", "progress": 38}}, "events/sampleps02": {"sample": true, "createdAt": "2026-11-11T12:00:00.000Z", "updatedAt": "2026-11-11T12:00:00.000Z", "general": {"p1": {"name": "Priya Shah", "role": "Bride"}, "p2": {"name": "Sam Lee", "role": "Partner"}, "date": "2026-11-28", "guests": "220"}, "timeline": {"items": []}, "venues": {"ceremony": {"name": "Harbourfront Hall"}, "reception": {"same": true}, "setup": {}}, "ceremony": {"on": true}, "cocktail": {"on": true}, "entrance": {"on": true, "intros": []}, "dinner": {}, "speeches": {"speakers": []}, "dances": {"first": {"on": true}, "parent1": {"who": "Bride & father"}, "parent2": {"who": "Partner & mother"}, "extra": []}, "traditions": {"items": {"baraat": true, "sangeet-performances": true}}, "music": {"genres": {"bollywood-bhangra": "Lots"}, "must": [], "maybe": [], "dnp": []}, "vendors": {"list": []}, "notes": {"text": ""}, "done": {"overview": true}, "lock": {"mode": "auto"}, "summary": {"p1": "Priya Shah", "p2": "Sam Lee", "date": "2026-11-28", "venue": "Harbourfront Hall", "guests": "220", "progress": 8}}}; save(); } return mem; }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(mem)); }catch(e){} }
+  var docSubs={}, colSubs={};
+  function clone(x){ return x==null?x:JSON.parse(JSON.stringify(x)); }
+  function snap(p){ var d=load()[p]; return { id:p.split('/').pop(), exists:!!d, data:function(){return clone(d);}, metadata:{fromCache:false,hasPendingWrites:false} }; }
+  function merge(t,s){ Object.keys(s).forEach(function(k){ var v=s[k]; if(v&&typeof v==='object'&&!Array.isArray(v)&&t[k]&&typeof t[k]==='object'&&!Array.isArray(t[k])) merge(t[k],v); else t[k]=clone(v); }); return t; }
+  function notify(p){ setTimeout(function(){ (docSubs[p]||[]).forEach(function(f){f(snap(p));}); var c=p.split('/').slice(0,-1).join('/'); (colSubs[c]||[]).forEach(function(f){f(colSnap(c));}); },0); }
+  function colSnap(c){ var docs=Object.keys(load()).filter(function(k){ return k.split('/').slice(0,-1).join('/')===c; }).map(snap); return {docs:docs,size:docs.length,empty:!docs.length,docChanges:function(){return [];},metadata:{fromCache:false,hasPendingWrites:false}}; }
+  function doc(p){ return { id:p.split('/').pop(), path:p,
+    get:function(){ return Promise.resolve(snap(p)); },
+    set:function(d){ load()[p]=clone(d); save(); notify(p); return Promise.resolve(); },
+    update:function(d){ var db=load(); db[p]=merge(db[p]||{},d); save(); notify(p); return Promise.resolve(); },
+    delete:function(){ delete load()[p]; save(); notify(p); return Promise.resolve(); },
+    onSnapshot:function(f){ (docSubs[p]=docSubs[p]||[]).push(f); setTimeout(function(){f(snap(p));},0); return function(){ docSubs[p]=docSubs[p].filter(function(x){return x!==f;}); }; } }; }
+  var db={ doc:doc, collection:function(c){ return { path:c, doc:function(id){return doc(c+'/'+id);}, onSnapshot:function(f){ (colSubs[c]=colSubs[c]||[]).push(f); setTimeout(function(){f(colSnap(c));},0); return function(){ colSubs[c]=colSubs[c].filter(function(x){return x!==f;}); }; } }; } };
+  var downloads={ save:function(r){ var blob=r.data instanceof Blob?r.data:new Blob([r.data],{type:'text/html'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=r.filename; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000); return Promise.resolve({status:'saved'}); } };
+  var user={ canEdit:function(){return Promise.resolve(true);}, isOwner:function(){return Promise.resolve(true);} };
+  window.claude={ use:function(n){ return Promise.resolve(n==='db'?db:n==='user'?user:n==='downloads'?downloads:null); } };
+  window.djpResetDemo=function(){ try{ localStorage.removeItem(KEY); }catch(e){} mem=null; location.hash=''; location.reload(); };
+  document.addEventListener('DOMContentLoaded',function(){
+    var n=document.createElement('div'); n.className='wrap';
+    n.innerHTML='<div class="banner info" style="margin-bottom:0"><span><b>Test version.</b> Everything you enter is saved in this browser only, so other people won’t see your changes.</span><button type="button" class="btn sm" onclick="djpResetDemo()">Reset sample data</button></div>';
+    var b=document.getElementById('banners'); b.parentNode.insertBefore(n,b);
+  });
+})();
+</script>
+</head>
+<body>
+
+<header class="top wrap" id="top"><div class="top-in" id="topIn">
+  <div class="brand"><div class="mark">DJ</div><div><div class="brand-name">Wedding DJ Planner</div></div></div>
+</div></header>
+<div id="banners" class="wrap"></div>
+<div id="app" class="wrap"><div class="state"><div class="spinner"></div><h2>Opening the planner</h2><p class="muted">Loading events and your saved answers.</p></div></div>
+
+<script>
+(() => {
+'use strict';
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const get = (o, p) => p.split('.').reduce((a, k) => a == null ? undefined : a[k], o);
+function put(o, p, v){ const ks = p.split('.'); let c = o; for (let i = 0; i < ks.length - 1; i++){ if (c[ks[i]] == null || typeof c[ks[i]] !== 'object') c[ks[i]] = {}; c = c[ks[i]]; } c[ks[ks.length - 1]] = v; }
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+function fmtT(t){ if (!t) return ''; const [h, m] = t.split(':').map(Number); if (isNaN(h)) return t; return `${((h + 11) % 12) + 1}:${String(m).padStart(2,'0')} ${h < 12 ? 'AM' : 'PM'}`; }
+function fmtD(d, long){ if (!d) return ''; const x = new Date(d + 'T12:00:00'); if (isNaN(x)) return d; return x.toLocaleDateString(undefined, long ? {weekday:'long', year:'numeric', month:'long', day:'numeric'} : {year:'numeric', month:'short', day:'numeric'}); }
+function daysUntil(d){ if (!d) return null; const t = new Date(); t.setHours(0,0,0,0); const x = new Date(d + 'T00:00:00'); if (isNaN(x)) return null; return Math.round((x - t) / 864e5); }
+const spotUrl = q => 'https://open.spotify.com/search/' + encodeURIComponent(q);
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k, v){ try { localStorage.setItem(k, v); } catch {} } };
+
+/* ---------- constants ---------- */
+const SECTIONS = [
+  ['overview', 'Couple & event', 'Who you are, the date, and the key times for the day.'],
+  ['timeline', 'Timeline', 'The run of the day, start to finish. Rough times are fine — your DJ will confirm with the venue.'],
+  ['venues', 'Venues & setup', 'Where we set up and what we need to know to load in smoothly.'],
+  ['ceremony', 'Ceremony', 'Music and sound for the ceremony itself.'],
+  ['cocktail', 'Cocktail hour', 'Background music while guests mingle.'],
+  ['entrance', 'Grand entrance', 'How you and your wedding party are introduced into the reception.'],
+  ['dinner', 'Dinner', 'Dinner service, the blessing, and the mood during the meal.'],
+  ['speeches', 'Speeches & toasts', 'Who speaks, in what order, and who keeps the night moving.'],
+  ['dances', 'Formal dances', 'Your first dance, parent dances and the other spotlight moments.'],
+  ['traditions', 'Traditions & add-ons', 'Cultural moments, games, and any extras you booked.'],
+  ['music', 'Music preferences', 'The sound of your dance floor: what to play lots of, and what to avoid.'],
+  ['vendors', 'Vendors', 'The team we will coordinate with on the day.'],
+  ['notes', 'Notes for the DJ', 'Anything else we should know.'],
+];
+const GENRES = ['Current hits','2010s','2000s','90s','80s','70s, Motown & disco','Hip hop & rap','R&B','Rock & alternative','Country','Latin','EDM & house','Afrobeats & dancehall','Bollywood & bhangra','Line dances','Rat Pack & oldies'];
+const GLEVELS = ['Lots','Some','Little','None'];
+const TRADITIONS = ['Hora','Money / dollar dance','Shoe game','Anniversary dance','Baraat','Sangeet performances','Tea ceremony','Grand march','Sparkler or cold-spark send-off','Bouquet & garter combined','Choreographed dance','Surprise performance'];
+const TIMELINE_PRESET = [
+  ['15:00','Guests arrive','Pre-ceremony music'], ['15:30','Ceremony begins',''], ['16:00','Cocktail hour','Photos with couple'],
+  ['17:15','Grand entrance',''], ['17:30','Dinner service',''], ['18:45','Speeches & toasts',''],
+  ['19:15','Cake cutting',''], ['19:25','First dance',''], ['19:30','Parent dances',''],
+  ['19:40','Dance floor opens',''], ['22:00','Late-night snack',''], ['23:45','Last dance',''], ['00:00','Send-off','']
+];
+
+/* ---------- state ---------- */
+let db = null, downloads = null, isDJ = false, previewCouple = false;
+let brand = { name: 'Your DJ Company', tagline: 'Wedding music planner', color: '#6b2d5c', logo: '', email: '', phone: '', lockDays: 14 };
+let events = [], eventsLoaded = false, unsubEvents = null;
+let ev = null, evId = null, unsubEv = null, section = 'overview';
+let lastWrite = '', dirty = new Set(), saving = false, saveTimer = null, saveState = '', needsRender = false;
+let dashFilter = store.get('djp-filter') || 'upcoming', showNew = false, showBrand = false, confirmDel = false;
+
+function blankEvent(){
+  return {
+    general: { p1: { role: 'Bride' }, p2: { role: 'Groom' } },
+    timeline: { items: [] },
+    venues: { ceremony: {}, reception: { same: false }, setup: {} },
+    ceremony: { on: true },
+    cocktail: { on: true },
+    entrance: { on: true, intros: [] },
+    dinner: {},
+    speeches: { speakers: [] },
+    dances: { first: { on: true }, parent1: { who: 'Bride & father' }, parent2: { who: 'Groom & mother' }, extra: [] },
+    traditions: { items: {} },
+    music: { genres: {}, must: [], maybe: [], dnp: [] },
+    vendors: { list: [] },
+    notes: { text: '' },
+    done: {},
+    lock: { mode: 'auto' },
+  };
+}
+
+/* ---------- branding ---------- */
+function applyBrand(){
+  document.documentElement.style.setProperty('--brand', /^#[0-9a-f]{6}$/i.test(brand.color) ? brand.color : '#6b2d5c');
+  const c = brand.color.replace('#',''); const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+  const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+  document.documentElement.style.setProperty('--on-brand', lum > 0.62 ? '#1c161f' : '#ffffff');
+}
+function brandHTML(){
+  const initials = (brand.name || 'DJ').split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase();
+  return `<div class="brand">${brand.logo ? `<img src="${esc(brand.logo)}" alt="${esc(brand.name)}">` : `<div class="mark">${esc(initials)}</div><div><div class="brand-name">${esc(brand.name)}</div><div class="brand-tag">${esc(brand.tagline || '')}</div></div>`}</div>`;
+}
+
+/* ---------- lock ---------- */
+function lockInfo(e){
+  const d = daysUntil(get(e,'general.date')); const mode = get(e,'lock.mode') || 'auto';
+  const days = Number(get(e,'lock.days') ?? brand.lockDays ?? 14);
+  if (mode === 'locked') return { locked: true, why: 'Your DJ has locked this planner. Contact them for any changes.' };
+  if (mode === 'open') return { locked: false, mode };
+  if (d != null && d <= days) return { locked: true, why: `This planner locked ${days} days before the wedding. Contact your DJ for any changes.` };
+  return { locked: false, left: d == null ? null : d - days, days };
+}
+const djView = () => isDJ && !previewCouple;
+const canEdit = () => djView() || !lockInfo(ev).locked;
+const progressOf = e => Math.round(100 * SECTIONS.filter(s => get(e, 'done.' + s[0])).length / SECTIONS.length);
+
+/* ---------- field builders ---------- */
+const fid = k => 'f_' + k.replace(/[^a-zA-Z0-9]/g, '_');
+function spot(v){ return `<a class="spot" target="_blank" rel="noopener" href="${v ? esc(spotUrl(v)) : '#'}" ${v ? '' : 'hidden'} title="Search on Spotify">Listen ↗</a>`; }
+function ctl(k, t, o = {}){
+  const v = get(ev, k); const id = fid(k);
+  const ph = o.ph ? ` placeholder="${esc(o.ph)}"` : '';
+  if (t === 'textarea') return `<textarea id="${id}" data-k="${k}" rows="${o.rows || 3}"${ph}>${esc(v)}</textarea>`;
+  if (t === 'select') return `<select id="${id}" data-k="${k}"><option value="">${esc(o.none || 'Choose…')}</option>${o.opts.map(x => `<option ${x === v ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+  if (t === 'song') return `<div class="song"><input type="text" id="${id}" data-k="${k}" data-song value="${esc(v)}" placeholder="${esc(o.ph || 'Song – Artist')}">${spot(v)}</div>`;
+  if (t === 'seg') return seg(k, o.opts, v);
+  return `<input type="${t}" id="${id}" data-k="${k}" value="${esc(v)}"${ph}${t === 'number' ? ' min="0" inputmode="numeric"' : ''}>`;
+}
+function F(k, label, t = 'text', o = {}){
+  if (t === 'check') return `<label class="chk ${o.full ? 'full' : ''}"><input type="checkbox" id="${fid(k)}" data-k="${k}" ${get(ev,k) ? 'checked' : ''}><span>${label}</span></label>`;
+  const forAttr = t === 'seg' ? '' : ` for="${fid(k)}"`;
+  return `<div class="fld ${o.full ? 'full' : ''}"><label class="lbl"${forAttr}>${label}</label>${ctl(k, t, o)}${o.help ? `<span class="help">${o.help}</span>` : ''}</div>`;
+}
+function seg(k, opts, v){
+  return `<div class="seg" role="group">${opts.map(x => `<button type="button" data-action="seg" data-k="${k}" data-v="${esc(x)}" aria-pressed="${x === v}">${esc(x)}</button>`).join('')}</div>`;
+}
+function yn(k){ const v = get(ev, k); return `<div class="seg" role="group" aria-label="Yes or no">${[['Yes',true],['No',false]].map(([l,b]) => `<button type="button" data-action="yn" data-k="${k}" data-v="${b}" aria-pressed="${v === b}">${l}</button>`).join('')}</div>`; }
+function M(k, title, desc, inner){
+  const on = get(ev, k + '.on') === true;
+  return `<div class="moment"><div class="mhead"><div><h4>${title}</h4>${desc ? `<p class="muted">${desc}</p>` : ''}</div>${yn(k + '.on')}</div>${on ? `<div class="mbody"><div class="grid">${inner}</div></div>` : ''}</div>`;
+}
+function L(k, cols, o = {}){
+  const arr = get(ev, k) || [];
+  const tmpl = (o.numbered ? '26px ' : '') + cols.map(c => c.w || 'minmax(0,1fr)').join(' ') + ' auto';
+  const head = `<div class="lhead" style="--cols:${tmpl}">${o.numbered ? '<span>#</span>' : ''}${cols.map(c => `<span>${c.l}</span>`).join('')}<span></span></div>`;
+  const rows = arr.map((r, i) => `<div class="lrow" style="--cols:${tmpl}">${o.numbered ? `<span class="num">${i + 1}</span>` : ''}${cols.map(c => `<div class="cell"><label class="cl" for="${fid(k + '.' + i + '.' + c.k)}">${c.l}</label>${ctl(k + '.' + i + '.' + c.k, c.t || 'text', c)}</div>`).join('')}<div class="lact"><button type="button" class="icon-btn" data-action="up" data-k="${k}" data-i="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>↑</button><button type="button" class="icon-btn" data-action="down" data-k="${k}" data-i="${i}" aria-label="Move down" ${i === arr.length - 1 ? 'disabled' : ''}>↓</button><button type="button" class="icon-btn" data-action="del" data-k="${k}" data-i="${i}" aria-label="Remove">✕</button></div></div>`).join('');
+  return `<div class="list">${arr.length ? head + rows : `<div class="empty">${o.empty || 'Nothing added yet.'}</div>`}</div><div class="ladd"><button type="button" class="btn sm" data-action="add" data-k="${k}">+ ${o.add || 'Add'}</button>${o.extra || ''}</div>`;
+}
+const card = (title, body, sub) => `<section class="card"><h3>${title}${sub ? ` <span class="muted">${sub}</span>` : ''}</h3>${body}</section>`;
+const grid = (...f) => `<div class="grid">${f.join('')}</div>`;
+
+/* ---------- sections ---------- */
+const R = {};
+R.overview = () => {
+  const p = n => grid(F(`general.${n}.name`, 'Name'), F(`general.${n}.role`, 'Role', 'select', { opts: ['Bride','Groom','Partner'] }), F(`general.${n}.email`, 'Email', 'email'), F(`general.${n}.phone`, 'Phone', 'tel'), F(`general.${n}.pron`, 'Name pronunciation', 'text', { ph: 'e.g. jack-LIN', full: true }));
+  return card('Partner one', p('p1')) + card('Partner two', p('p2')) +
+    card('The day', `<div class="grid g3">${F('general.date','Wedding date','date')}${F('general.guests','Number of guests','number')}${F('general.ages','Crowd age mix','select',{opts:['Mostly 20s–30s','Mostly 30s–40s','Wide mix of ages','Mostly 50+']})}${F('general.partyArrival','Wedding party arrival','time')}${F('general.guestArrival','Guest arrival','time')}${F('general.receptionStart','Reception start','time')}${F('general.receptionEnd','Reception end','time')}${F('general.hashtag','Wedding hashtag','text',{ph:'#'})}${F('general.coordinator','Day-of contact','text',{ph:'Name & phone'})}</div>`);
+};
+R.timeline = () => card('Run of the day', L('timeline.items', [
+  { k: 'time', l: 'Time', t: 'time', w: '120px' }, { k: 'what', l: 'Moment', ph: 'e.g. Grand entrance' }, { k: 'notes', l: 'Notes', ph: 'Location, who’s involved…' }
+], { add: 'Add moment', empty: 'No timeline yet. Load a typical wedding timeline and adjust the times, or add moments one at a time.', extra: `<button type="button" class="btn sm" data-action="preset">Load typical timeline</button><button type="button" class="btn sm ghost" data-action="sort">Sort by time</button>` }), 'Times after midnight sort to the end');
+R.venues = () => {
+  const v = n => grid(F(`venues.${n}.name`,'Venue name'), F(`venues.${n}.room`,'Room / area'), F(`venues.${n}.address`,'Address','text',{full:true}), F(`venues.${n}.contact`,'Venue contact'), F(`venues.${n}.contactPhone`,'Contact phone','tel'), F(`venues.${n}.setting`,'Setting','select',{opts:['Indoor','Outdoor','Outdoor, covered / tent']}), F(`venues.${n}.floor`,'Floor'), F(`venues.${n}.elevator`,'Elevator access','select',{opts:['Yes','No','Not needed (ground level)']}), F(`venues.${n}.rain`,'Rain plan','text',{ph:'Where we move if it rains'}));
+  const same = get(ev, 'venues.reception.same');
+  return card('Ceremony venue', v('ceremony')) +
+    card('Reception venue', `${F('venues.reception.same','Same venue as the ceremony','check')}${same ? '' : `<div style="margin-top:12px">${v('reception')}</div>`}`) +
+    card('Setup & load-in', `<div class="grid g3">${F('venues.setup.loadIn','Earliest load-in','time')}${F('venues.setup.stairs','Stairs to carry gear','select',{opts:['None','A few steps','Full flight']})}${F('venues.setup.power','Power within 25 ft','select',{opts:['Yes','No','Not sure']})}${F('venues.setup.generator','Generator required','select',{opts:['No','Yes','Not sure']})}${F('venues.setup.table','Table provided for DJ','select',{opts:['Yes','No — please bring one','Not sure']})}${F('venues.setup.tent','Tent / cover for DJ','select',{opts:['Not needed','Yes','No — please bring one']})}</div><div class="grid" style="margin-top:12px">${F('venues.setup.parking','Parking & loading notes','textarea',{full:true,rows:2,ph:'Loading dock, where to park, access codes…'})}${F('venues.setup.curfew','Venue sound curfew','time')}${F('venues.setup.wifi','Wi-Fi (for requests)','text',{ph:'Network / password'})}</div>`);
+};
+R.ceremony = () => {
+  const on = get(ev, 'ceremony.on');
+  const head = `<div class="mhead"><div><h4>Should we provide ceremony music?</h4><p class="muted">Includes sound for your officiant and readers.</p></div>${yn('ceremony.on')}</div>`;
+  if (on === false) return card('Ceremony sound', head + `<div class="mbody" style="margin-top:12px">${F('ceremony.paOnly','We don’t need music, but we need a PA and microphone for the officiant','check')}</div>`);
+  return card('Ceremony sound', head + `<div class="grid g3" style="margin-top:14px">${F('ceremony.start','Ceremony start','time')}${F('ceremony.end','Ceremony end','time')}${F('ceremony.officiant','Officiant')}${F('ceremony.mics','Microphones','select',{opts:['Lapel mic for officiant','Handheld mic','Lapel + handheld for readers','Stand mic at the front']})}${F('ceremony.readers','Number of readers','number')}${F('ceremony.vows','Mic for vows?','select',{opts:['Yes, guests should hear the vows','No, keep it private']})}</div>`) +
+    card('Ceremony music', M('ceremony.pre','Pre-ceremony music','While guests find their seats.', F('ceremony.pre.style','Style','select',{opts:['Acoustic covers','Classical & strings','Modern instrumental','Jazz','Our own playlist']})+F('ceremony.pre.notes','Notes')) +
+      M('ceremony.proc','Processional','Your wedding party and your walk down the aisle.', F('ceremony.proc.party','Wedding party song','song')+F('ceremony.proc.couple','Your entrance song','song')+F('ceremony.proc.notes','Cue notes','text',{full:true,ph:'e.g. Switch songs when the flower girl reaches the front'})) +
+      M('ceremony.registry','Signing of the registry','', F('ceremony.registry.song','Song(s)','song')+F('ceremony.registry.notes','Notes')) +
+      M('ceremony.unity','Unity ceremony','Sand, candle, handfasting or similar.', F('ceremony.unity.type','Type')+F('ceremony.unity.song','Song','song')) +
+      M('ceremony.rec','Recessional','Your exit as a married couple.', F('ceremony.rec.song','Recessional song','song')+F('ceremony.rec.notes','Notes')));
+};
+R.cocktail = () => card('Cocktail hour', M('cocktail','Cocktail music','', F('cocktail.where','Location','text',{ph:'Patio, foyer…'})+F('cocktail.style','Style','select',{opts:['Jazz & swing','Acoustic covers','Lounge & chill','Upbeat pop','Soul & Motown','Our own playlist']})+F('cocktail.start','Starts','time')+F('cocktail.end','Ends','time')+F('cocktail.games','Lawn games or activities','text',{full:true})+F('cocktail.notes','Notes','textarea',{full:true,rows:2})));
+R.entrance = () => {
+  const on = get(ev, 'entrance.on');
+  return card('Grand entrance', `<div class="mhead"><div><h4>Would you like a grand entrance?</h4><p class="muted">Your MC or DJ introduces you into the reception.</p></div>${yn('entrance.on')}</div>` +
+    (on ? `<div class="grid" style="margin-top:14px">${F('entrance.style','Format','select',{opts:['Wedding party, then the couple','Couple only','Everyone together, one song'],full:true})}${F('entrance.partySong','Wedding party song','song')}${F('entrance.coupleSong','Couple’s entrance song','song')}${F('entrance.intro','How should we introduce you?','text',{full:true,ph:'e.g. For the first time as husband and wife, Mr. & Mrs. …'})}</div>` : '')) +
+    (on ? card('Introduction order', L('entrance.intros', [
+      { k: 'names', l: 'Names', ph: 'e.g. Maya Chen & Liam Ortiz' }, { k: 'role', l: 'Role', ph: 'Maid of honour & best man' }, { k: 'say', l: 'Pronunciation', ph: 'MY-uh', w: 'minmax(0,.8fr)' }, { k: 'song', l: 'Own song (optional)', t: 'song' }
+    ], { numbered: true, add: 'Add pair', empty: 'Add each pair or person in the order they walk in.' }), 'In walk-in order') : '');
+};
+R.dinner = () => card('Dinner service', `<div class="grid g3">${F('dinner.style','Dinner style','select',{opts:['Plated / individually served','Family style','Buffet','Food stations']})}${F('dinner.start','Dinner starts','time')}${F('dinner.djMeal','Meal provided for DJ','select',{opts:['Yes','No']})}</div><div class="grid" style="margin-top:12px">${F('dinner.music','Dinner music','select',{opts:['Soft jazz & acoustic','Classic love songs','Soul & Motown','Mellow current hits','Our own playlist']})}${F('dinner.order','Table release order','text',{ph:'e.g. Head table, then by table number'})}${F('dinner.notes','Notes','textarea',{full:true,rows:2,ph:'e.g. Keep it soft; quiet background for conversation'})}</div>`) +
+  card('Blessing', M('dinner.blessing','Blessing or grace before the meal','', F('dinner.blessing.by','Given by')+F('dinner.blessing.notes','Notes')));
+R.speeches = () => card('Master of ceremonies', `<div class="grid">${F('speeches.mc','Who is MCing?','select',{opts:['The DJ','Guest MC(s)','No MC']})}${F('speeches.mcNames','MC name(s)')}${F('speeches.when','When do speeches happen?','select',{opts:['Before dinner','Between courses','After dinner','During dessert']})}${F('speeches.length','Total time for speeches','select',{opts:['Under 15 minutes','15–30 minutes','30–45 minutes','Over 45 minutes']})}</div>`) +
+  card('Speakers', L('speeches.speakers', [
+    { k: 'name', l: 'Speaker' }, { k: 'rel', l: 'Relationship', ph: 'Father of the bride' }, { k: 'mic', l: 'Mic', t: 'select', opts: ['Handheld','Podium','Lapel'], w: '130px' }, { k: 'song', l: 'Walk-up song', t: 'song', ph: 'Optional' }
+  ], { numbered: true, add: 'Add speaker', empty: 'Add speakers in the order they will speak.' }), 'In speaking order') +
+  card('Toast & presentations', M('speeches.toast','A toast to the couple','', F('speeches.toast.by','Toast by')+F('speeches.toast.notes','Notes')) + M('speeches.slides','Slideshow or video','We’ll need a screen and audio hookup.', F('speeches.slides.when','When','text')+F('speeches.slides.source','Plays from','select',{opts:['Laptop (HDMI)','USB stick','Venue AV system']})+F('speeches.slides.notes','Notes','text',{full:true})));
+R.dances = () => {
+  const d = (k, t, desc, who) => M('dances.' + k, t, desc, (who ? F(`dances.${k}.who`,'Who') : '') + F(`dances.${k}.song`,'Song','song') + F(`dances.${k}.edit`,'Length','select',{opts:['Full song','Fade around 1:30','Fade around 2:00','Fade around 2:30','Custom (see notes)']}) + F(`dances.${k}.notes`,'Notes','text',{ph:'Invite guests to join halfway, etc.'}));
+  return card('Spotlight dances', d('first','Couple’s first dance','') + d('parent1','Parent dance','e.g. Bride & father', true) + d('parent2','Second parent dance','e.g. Groom & mother', true) + d('party','Wedding party dance','') + d('anniv','Anniversary dance','Couples leave the floor by years married.') + d('last','Last dance of the evening','')) +
+    card('Other moments', M('dances.cake','Cake cutting','', F('dances.cake.when','When','select',{opts:['After dinner','Before dinner','During dancing','Late-night']})+F('dances.cake.song','Song','song')) + M('dances.bouquet','Bouquet toss','', F('dances.bouquet.song','Song','song')+F('dances.bouquet.notes','Notes')) + M('dances.garter','Garter toss','', F('dances.garter.song','Song','song')+F('dances.garter.notes','Notes')) + M('dances.money','Money / dollar dance','', F('dances.money.song','Song','song')+F('dances.money.notes','Notes'))) +
+    card('Other special dances', L('dances.extra', [{ k: 'who', l: 'Who' }, { k: 'song', l: 'Song', t: 'song' }, { k: 'when', l: 'When', ph: 'After parent dances' }], { add: 'Add dance', empty: 'Grandparents, siblings, a surprise dance — add them here.' }));
+};
+R.traditions = () => card('Traditions & games', `<div class="grid">${TRADITIONS.map(t => F('traditions.items.' + slug(t), t, 'check')).join('')}</div><div style="margin-top:12px">${F('traditions.notes','Details','textarea',{full:true,rows:3,ph:'Songs, timing and who is involved for each tradition'})}</div>`) +
+  card('Add-ons', M('traditions.uplight','Uplighting','', F('traditions.uplight.color','Colour','text',{ph:'e.g. Blush, gold, match the florals'})+F('traditions.uplight.where','Where','text')) + M('traditions.monogram','Monogram projection','', F('traditions.monogram.text','Text','text',{ph:'Initials & date'})+F('traditions.monogram.where','Where','text')) + M('traditions.booth','Photo booth','', F('traditions.booth.hours','Hours','text')+F('traditions.booth.backdrop','Backdrop','text')) + M('traditions.sparks','Cold sparks','', F('traditions.sparks.when','Moment','text',{ph:'First dance, entrance…'})+F('traditions.sparks.notes','Notes','text')) + M('traditions.clouds','Dancing on the clouds','Low-lying fog for the first dance.', F('traditions.clouds.notes','Notes','text',{full:true})));
+R.music = () => {
+  const songCols = [{ k: 'song', l: 'Song', t: 'song', ph: 'Song title' }, { k: 'artist', l: 'Artist' }, { k: 'note', l: 'Note', ph: 'When to play, which version…' }];
+  return card('How much of each?', `<div class="genres">${GENRES.map(g => `<div class="genre"><span>${g}</span>${seg('music.genres.' + slug(g), GLEVELS, get(ev, 'music.genres.' + slug(g)))}</div>`).join('')}</div>`) +
+    card('The vibe', `<div class="grid">${F('music.vibe','Describe your ideal dance floor','textarea',{full:true,rows:4,ph:'e.g. Sing-along songs, early 2000s R&B and pop, a couple of classics for the parents…'})}${F('music.requests','Guest requests','select',{opts:['Yes, play what guests ask for','Yes, but use your judgment','Only from our list','No requests']})}${F('music.clean','Lyrics','select',{opts:['Clean edits only','Explicit is fine after dinner','Explicit is fine']})}${F('music.playlist','Shared playlist link','url',{full:true,ph:'https://open.spotify.com/playlist/…'})}</div>`) +
+    card('Must play', L('music.must', songCols, { add: 'Add song', empty: 'Songs you’d be sad not to hear.' })) +
+    card('Play if possible', L('music.maybe', songCols, { add: 'Add song', empty: 'Nice to have if the floor is right for it.' })) +
+    card('Do not play', L('music.dnp', [{ k: 'song', l: 'Song or artist', ph: 'e.g. Chicken Dance' }, { k: 'note', l: 'Note', ph: 'Optional' }], { add: 'Add song', empty: 'Anything we should never play — even if a guest asks.' }));
+};
+R.vendors = () => card('Vendor contacts', L('vendors.list', [
+  { k: 'role', l: 'Role', t: 'select', opts: ['Planner / coordinator','Photographer','Videographer','Venue coordinator','Officiant','Caterer','Florist','Photo booth','Live musicians','Other'], w: 'minmax(0,1fr)' }, { k: 'name', l: 'Name / company' }, { k: 'phone', l: 'Phone', t: 'tel' }, { k: 'email', l: 'Email', t: 'email' }
+], { add: 'Add vendor', empty: 'Add your photographer, videographer and planner so we can coordinate shots and timing.' }));
+R.notes = () => card('Anything else?', F('notes.text','For any additional song requests or important information for your DJ, please describe in detail.','textarea',{full:true,rows:12}));
+
+/* ---------- run sheet ---------- */
+function runSheet(e){
+  const g = (p) => get(e, p);
+  const v = x => x ? esc(x) : '<span class="none">—</span>';
+  const kv = rows => `<table><tbody>${rows.filter(r => r[1]).map(r => `<tr><td class="k">${r[0]}</td><td>${esc(r[1])}</td></tr>`).join('') || '<tr><td class="none">Nothing entered</td></tr>'}</tbody></table>`;
+  const names = [g('general.p1.name'), g('general.p2.name')].filter(Boolean).join(' & ') || 'Unnamed couple';
+  const ven = g('venues.ceremony.name'); const rven = g('venues.reception.same') ? ven : g('venues.reception.name');
+  let h = `<h3>Event</h3>` + kv([['Couple', names], ['Date', fmtD(g('general.date'), true)], ['Guests', g('general.guests')], ['Ceremony venue', [ven, g('venues.ceremony.address')].filter(Boolean).join(', ')], ['Reception venue', [rven, g('venues.reception.same') ? '' : g('venues.reception.address')].filter(Boolean).join(', ')], ['Load-in', fmtT(g('venues.setup.loadIn'))], ['Guest arrival', fmtT(g('general.guestArrival'))], ['Reception', [fmtT(g('general.receptionStart')), fmtT(g('general.receptionEnd'))].filter(Boolean).join(' – ')], ['Sound curfew', fmtT(g('venues.setup.curfew'))], ['Day-of contact', g('general.coordinator')], [g('general.p1.name') || 'Partner one', [g('general.p1.phone'), g('general.p1.pron') && 'say: ' + g('general.p1.pron')].filter(Boolean).join(' · ')], [g('general.p2.name') || 'Partner two', [g('general.p2.phone'), g('general.p2.pron') && 'say: ' + g('general.p2.pron')].filter(Boolean).join(' · ')], ['Parking & loading', g('venues.setup.parking')]]);
+  const tl = g('timeline.items') || [];
+  h += `<h3>Timeline</h3>` + (tl.length ? `<table><tbody>${tl.map(r => `<tr><td class="t">${esc(fmtT(r.time)) || '—'}</td><td><b>${esc(r.what)}</b>${r.notes ? ` <span class="none" style="font-style:normal">· ${esc(r.notes)}</span>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="none">No timeline entered.</p>');
+  const cues = [];
+  const add = (moment, who, song, note) => cues.push([moment, who || '', song || '', note || '']);
+  if (g('ceremony.on') === false) add('Ceremony', '', '', g('ceremony.paOnly') ? 'No music — PA & mic for officiant only' : 'No ceremony services');
+  else {
+    if (g('ceremony.mics')) add('Ceremony mics', g('ceremony.officiant'), '', [g('ceremony.mics'), g('ceremony.vows')].filter(Boolean).join('; '));
+    if (g('ceremony.pre.on')) add('Pre-ceremony', '', g('ceremony.pre.style'), g('ceremony.pre.notes'));
+    if (g('ceremony.proc.on')) { add('Processional — wedding party', '', g('ceremony.proc.party'), g('ceremony.proc.notes')); add('Processional — couple', '', g('ceremony.proc.couple'), ''); }
+    if (g('ceremony.unity.on')) add('Unity ceremony', g('ceremony.unity.type'), g('ceremony.unity.song'), '');
+    if (g('ceremony.registry.on')) add('Registry signing', '', g('ceremony.registry.song'), g('ceremony.registry.notes'));
+    if (g('ceremony.rec.on')) add('Recessional', '', g('ceremony.rec.song'), g('ceremony.rec.notes'));
+  }
+  if (g('cocktail.on')) add('Cocktail hour', g('cocktail.where'), g('cocktail.style'), [fmtT(g('cocktail.start')), fmtT(g('cocktail.end'))].filter(Boolean).join(' – '));
+  if (g('entrance.on')) { add('Grand entrance — party', g('entrance.style'), g('entrance.partySong'), ''); add('Grand entrance — couple', g('entrance.intro'), g('entrance.coupleSong'), ''); }
+  add('Dinner', g('dinner.style'), g('dinner.music'), [g('dinner.djMeal') && 'DJ meal: ' + g('dinner.djMeal'), g('dinner.notes')].filter(Boolean).join('; '));
+  if (g('dinner.blessing.on')) add('Blessing', g('dinner.blessing.by'), '', g('dinner.blessing.notes'));
+  if (g('speeches.toast.on')) add('Toast', g('speeches.toast.by'), '', g('speeches.toast.notes'));
+  const dn = { first: 'First dance', parent1: 'Parent dance', parent2: 'Parent dance', party: 'Wedding party dance', anniv: 'Anniversary dance', cake: 'Cake cutting', bouquet: 'Bouquet toss', garter: 'Garter toss', money: 'Money dance', last: 'Last dance' };
+  Object.entries(dn).forEach(([k, l]) => { if (g(`dances.${k}.on`)) add(l, g(`dances.${k}.who`) || g(`dances.${k}.when`), g(`dances.${k}.song`), [g(`dances.${k}.edit`), g(`dances.${k}.notes`)].filter(Boolean).join('; ')); });
+  (g('dances.extra') || []).forEach(r => add('Special dance', r.who, r.song, r.when));
+  h += `<h3>Music cues</h3><div class="rs-scroll"><table><thead><tr><th>Moment</th><th>Who / details</th><th>Song</th><th>Notes</th></tr></thead><tbody>${cues.map(c => `<tr><td><b>${esc(c[0])}</b></td><td>${v(c[1])}</td><td>${v(c[2])}</td><td>${v(c[3])}</td></tr>`).join('')}</tbody></table></div>`;
+  const intros = g('entrance.on') ? (g('entrance.intros') || []) : [];
+  if (intros.length) h += `<h3>Introductions (in order)</h3><table><tbody>${intros.map((r, i) => `<tr><td class="t">${i + 1}</td><td><b>${esc(r.names)}</b>${r.say ? ` <i>(${esc(r.say)})</i>` : ''}</td><td>${v(r.role)}</td><td>${v(r.song)}</td></tr>`).join('')}</tbody></table>`;
+  const sp = g('speeches.speakers') || [];
+  h += `<h3>Speeches</h3>` + kv([['MC', [g('speeches.mc'), g('speeches.mcNames')].filter(Boolean).join(' — ')], ['When', g('speeches.when')], ['Length', g('speeches.length')]]) + (sp.length ? `<table><tbody>${sp.map((r, i) => `<tr><td class="t">${i + 1}</td><td><b>${esc(r.name)}</b></td><td>${v(r.rel)}</td><td>${v(r.mic)}</td><td>${v(r.song)}</td></tr>`).join('')}</tbody></table>` : '');
+  const trad = TRADITIONS.filter(t => g('traditions.items.' + slug(t)));
+  const addons = [['uplight','Uplighting','color'],['monogram','Monogram','text'],['booth','Photo booth','hours'],['sparks','Cold sparks','when'],['clouds','Dancing on the clouds','notes']].filter(a => g(`traditions.${a[0]}.on`)).map(a => [a[1], g(`traditions.${a[0]}.${a[2]}`) || 'Yes']);
+  if (trad.length || addons.length || g('traditions.notes')) h += `<h3>Traditions & add-ons</h3>` + kv([['Traditions', trad.join(', ')], ['Details', g('traditions.notes')], ...addons]);
+  const gen = GENRES.map(x => [x, g('music.genres.' + slug(x))]).filter(x => x[1]);
+  h += `<h3>Music direction</h3>` + kv([['Play lots', gen.filter(x => x[1] === 'Lots').map(x => x[0]).join(', ')], ['Some', gen.filter(x => x[1] === 'Some').map(x => x[0]).join(', ')], ['A little', gen.filter(x => x[1] === 'Little').map(x => x[0]).join(', ')], ['Avoid', gen.filter(x => x[1] === 'None').map(x => x[0]).join(', ')], ['Guest requests', g('music.requests')], ['Lyrics', g('music.clean')], ['Playlist', g('music.playlist')], ['Vibe', g('music.vibe')]]);
+  const songs = (k, t) => { const a = g(k) || []; return a.length ? `<p><b>${t}</b></p><table><tbody>${a.map(r => `<tr><td>${esc([r.song, r.artist].filter(Boolean).join(' – '))}</td><td class="none" style="font-style:normal">${esc(r.note || '')}</td></tr>`).join('')}</tbody></table>` : ''; };
+  h += songs('music.must', 'Must play') + songs('music.maybe', 'Play if possible') + songs('music.dnp', 'Do not play');
+  const vd = g('vendors.list') || [];
+  if (vd.length) h += `<h3>Vendors</h3><table><tbody>${vd.map(r => `<tr><td class="k">${v(r.role)}</td><td>${v(r.name)}</td><td>${v(r.phone)}</td><td>${v(r.email)}</td></tr>`).join('')}</tbody></table>`;
+  if (g('notes.text')) h += `<h3>Notes from the couple</h3><p>${esc(g('notes.text'))}</p>`;
+  return h;
+}
+R.runsheet = () => card('Day-of run sheet', `<div class="row" style="margin-bottom:14px">${downloads ? '<button type="button" class="btn primary sm" data-action="download">Download printable copy</button>' : ''}<span class="muted" style="font-size:13px">Built automatically from the planner. Only answers that have been filled in appear here.</span></div><div class="rs">${runSheet(ev)}</div>`);
+
+/* ---------- top bar ---------- */
+function renderTop(){
+  const t = $('#topIn');
+  if (!ev || !evId){
+    t.innerHTML = brandHTML() + `<div class="top-mid"></div>${isDJ ? `<button type="button" class="btn" data-action="brand">Branding</button><button type="button" class="btn primary" data-action="new">New event</button>` : ''}`;
+  } else {
+    const n = [get(ev,'general.p1.name'), get(ev,'general.p2.name')].filter(Boolean).join(' & ') || 'New couple';
+    const d = daysUntil(get(ev,'general.date'));
+    const venue = get(ev,'venues.ceremony.name') || get(ev,'venues.reception.name');
+    t.innerHTML = brandHTML() + `<div class="top-mid"><span class="couple">${esc(n)}</span><span class="top-meta">${[fmtD(get(ev,'general.date'), true), venue].filter(Boolean).map(esc).join(' · ') || 'Add your date in Couple & event'}</span></div>` +
+      (d == null ? '' : `<div class="count"><b>${d < 0 ? Math.abs(d) : d}</b><span>${d < 0 ? 'days since the wedding' : d === 0 ? 'Today’s the day!' : d === 1 ? 'day to go' : 'days to go'}</span></div>`) +
+      `<div class="save ${saveState === 'error' || saveState === 'denied' ? 'err' : ''}" aria-live="polite">${{saving:'Saving…', saved:'All changes saved', error:'Couldn’t save — check your connection', denied:'View-only access', '':''}[saveState]}</div>` +
+      (isDJ ? `<button type="button" class="btn ghost sm" data-action="back">← All events</button>` : '');
+  }
+  requestAnimationFrame(() => document.documentElement.style.setProperty('--toph', $('#top').offsetHeight + 'px'));
+}
+function renderBanners(){
+  const b = $('#banners'); let h = '';
+  if (ev && evId){
+    if (isDJ && previewCouple) h += `<div class="banner info"><span>You’re previewing what the couple sees.</span><button type="button" class="btn sm" data-action="preview">Exit preview</button></div>`;
+    const L_ = lockInfo(ev);
+    if (L_.locked) h += `<div class="banner lock"><span>🔒 ${djView() ? 'Locked for the couple. You can still edit as the DJ.' : esc(L_.why)}</span></div>`;
+    else if (L_.left != null && L_.left <= 14 && L_.left >= 0) h += `<div class="banner info"><span>This planner locks in <b>${L_.left} day${L_.left === 1 ? '' : 's'}</b> (${L_.days} days before the wedding). Please finish any changes before then.</span></div>`;
+  }
+  b.innerHTML = h;
+}
+
+/* ---------- planner ---------- */
+function renderPlanner(){
+  renderTop(); renderBanners();
+  const pct = progressOf(ev);
+  const nav = SECTIONS.map(([id, t]) => `<button type="button" class="navi" data-action="nav" data-s="${id}" aria-current="${section === id}"><span class="dot ${get(ev, 'done.' + id) ? 'done' : ''}"></span>${t}</button>`).join('') +
+    `<button type="button" class="navi rs" data-action="nav" data-s="runsheet" aria-current="${section === 'runsheet'}">📋 Day-of run sheet</button>`;
+  $('#app').innerHTML = `<div class="shell"><nav class="rail" aria-label="Planner sections"><div class="prog"><div class="bar"><i style="width:${pct}%"></i></div><small>${pct}% complete</small></div>${nav}</nav><main class="main" id="main"></main></div>`;
+  renderMain();
+}
+function renderMain(){
+  const m = $('#main'); if (!m) return;
+  const meta = SECTIONS.find(s => s[0] === section) || ['runsheet', 'Day-of run sheet', 'Everything your DJ needs on the day, on one page.'];
+  const idx = SECTIONS.findIndex(s => s[0] === section);
+  const done = get(ev, 'done.' + section);
+  const next = SECTIONS[idx + 1];
+  let h = `<div class="sec-head"><div><h2>${meta[1]}</h2><p>${meta[2]}</p></div>${done ? '<span class="done-chip">✓ Marked complete</span>' : ''}</div>`;
+  if (section === 'overview' && djView()) h += djPanel();
+  h += `<fieldset ${canEdit() || section === 'runsheet' ? '' : 'disabled'}>${R[section]()}</fieldset>`;
+  if (section !== 'runsheet') h += `<div class="secfoot"><button type="button" class="btn ${done ? '' : 'primary'}" data-action="done" ${canEdit() ? '' : 'disabled'}>${done ? 'Mark as not finished' : 'Mark section complete'}</button>${next ? `<button type="button" class="btn ghost" data-action="nav" data-s="${next[0]}">Next: ${next[1]} →</button>` : `<button type="button" class="btn ghost" data-action="nav" data-s="runsheet">See the run sheet →</button>`}</div>`;
+  m.innerHTML = h;
+  needsRender = false;
+}
+function djPanel(){
+  const mode = get(ev, 'lock.mode') || 'auto';
+  const code = '#plan-' + evId;
+  return `<section class="card dj"><h3>DJ controls <span class="muted">Only you see this panel</span></h3>
+  <div class="grid">
+    <div class="fld"><span class="lbl">Couple’s planner link</span><div class="row"><span class="code" id="plancode">${esc(code)}</span><button type="button" class="btn sm" data-action="copy">Copy</button></div><span class="help">Share this artifact with the couple, then send them its link with this ending added.</span></div>
+    <div class="fld"><span class="lbl">Couple editing</span>${seg('lock.mode', ['auto','locked','open'], mode).replace(/>auto</,'>Auto-lock<').replace(/>locked</,'>Locked now<').replace(/>open</,'>Always open<')}${mode === 'auto' ? `<div class="row" style="margin-top:6px"><label class="help" for="${fid('lock.days')}">Lock this many days before:</label><input type="number" id="${fid('lock.days')}" data-k="lock.days" value="${esc(get(ev,'lock.days') ?? brand.lockDays)}" min="0" style="width:80px"></div>` : ''}</div>
+  </div>
+  <div class="row" style="margin-top:14px"><button type="button" class="btn sm" data-action="preview">Preview as couple</button><button type="button" class="btn sm" data-action="nav" data-s="runsheet">Open run sheet</button>${confirmDel ? `<span class="muted" style="font-size:13px">Delete this event and all its answers?</span><button type="button" class="btn sm danger" data-action="delete-yes">Yes, delete</button><button type="button" class="btn sm ghost" data-action="delete-no">Cancel</button>` : `<button type="button" class="btn sm ghost danger" data-action="delete">Delete event</button>`}</div></section>`;
+}
+
+/* ---------- dashboard ---------- */
+function statusOf(e){
+  const s = e.summary || {}; const d = daysUntil(s.date); const p = s.progress || 0; const L_ = lockInfo(e);
+  if (d != null && d < 0) return ['past','Past'];
+  if (p >= 100) return ['ready','Ready'];
+  if (L_.locked) return ['lock','Locked'];
+  if (d != null && d <= 45 && p < 60) return ['risk','Needs attention'];
+  return ['plan','Planning'];
+}
+function renderDash(){
+  renderTop(); renderBanners();
+  if (!isDJ){ $('#app').innerHTML = `<div class="state"><h2>Open your planner link</h2><p class="muted">Your DJ will send you a link to your own wedding planner. Open that link to fill in your music and timeline.</p></div>`; return; }
+  const list = events.slice().sort((a, b) => (a.summary?.date || '9999').localeCompare(b.summary?.date || '9999'));
+  const up = list.filter(e => (daysUntil(e.summary?.date) ?? 1) >= 0);
+  const past = list.filter(e => (daysUntil(e.summary?.date) ?? 1) < 0).reverse();
+  const shown = dashFilter === 'upcoming' ? up : dashFilter === 'past' ? past : list;
+  const attention = up.filter(e => statusOf(e)[0] === 'risk').length;
+  const next30 = up.filter(e => daysUntil(e.summary?.date) <= 30).length;
+  let h = `<div class="dash">`;
+  if (showBrand) h += brandPanel();
+  if (showNew) h += `<form class="panel" id="newForm"><h2>New event</h2><div class="grid g3"><div class="fld"><label class="lbl" for="n_p1">Partner one</label><input type="text" id="n_p1" required></div><div class="fld"><label class="lbl" for="n_p2">Partner two</label><input type="text" id="n_p2"></div><div class="fld"><label class="lbl" for="n_date">Wedding date</label><input type="date" id="n_date" required></div><div class="fld"><label class="lbl" for="n_venue">Venue</label><input type="text" id="n_venue"></div><div class="fld"><label class="lbl" for="n_guests">Guests</label><input type="number" id="n_guests" min="0"></div></div><div class="row" style="margin-top:14px"><button class="btn primary" type="submit">Create planner</button><button class="btn ghost" type="button" data-action="new">Cancel</button></div></form>`;
+  h += `<div class="dash-head"><div><h1>Weddings</h1><div class="stats tnum"><span><b>${up.length}</b>upcoming</span><span><b>${next30}</b>in the next 30 days</span><span><b>${attention}</b>need attention</span></div></div>${seg('_filter', ['upcoming','past','all'], dashFilter).replace(/data-action="seg"/g,'data-action="filter"').replace(/>upcoming</,'>Upcoming<').replace(/>past</,'>Past<').replace(/>all</,'>All<')}</div>`;
+  if (!eventsLoaded) h += `<div class="tbl-wrap"><div class="state" style="margin:40px auto"><div class="spinner"></div><p class="muted">Loading events…</p></div></div>`;
+  else if (!shown.length) h += `<div class="tbl-wrap"><div class="state" style="margin:40px auto"><h2>${events.length ? 'Nothing here' : 'No weddings yet'}</h2><p class="muted">${events.length ? 'Try a different filter.' : 'Create your first event, then send the couple their planner link.'}</p>${events.length ? '' : '<button type="button" class="btn primary" data-action="new">New event</button>'}</div></div>`;
+  else h += `<div class="tbl-wrap"><table><thead><tr><th>Couple</th><th>Date</th><th>Days out</th><th>Venue</th><th>Guests</th><th>Planner</th><th>Status</th></tr></thead><tbody>${shown.map(e => { const s = e.summary || {}; const d = daysUntil(s.date); const st = statusOf(e); return `<tr data-open="${esc(e._id)}" tabindex="0"><td><span class="who">${esc([s.p1, s.p2].filter(Boolean).join(' & ') || 'Unnamed')}</span>${e.sample ? '<span class="sample">SAMPLE</span>' : ''}</td><td class="tnum">${esc(fmtD(s.date))}</td><td class="tnum">${d == null ? '—' : d < 0 ? `${-d} ago` : d}</td><td>${esc(s.venue || '—')}</td><td class="tnum">${esc(s.guests || '—')}</td><td class="tnum"><span class="bar"><i style="width:${s.progress || 0}%"></i></span>${s.progress || 0}%</td><td><span class="pill ${st[0]}">${st[1]}</span></td></tr>`; }).join('')}</tbody></table></div>`;
+  $('#app').innerHTML = h + `</div>`;
+}
+function brandPanel(){
+  return `<form class="panel" id="brandForm"><h2>Branding</h2><div class="grid g3">
+    <div class="fld"><label class="lbl" for="b_name">Company name</label><input type="text" id="b_name" value="${esc(brand.name)}"></div>
+    <div class="fld"><label class="lbl" for="b_tag">Tagline</label><input type="text" id="b_tag" value="${esc(brand.tagline)}"></div>
+    <div class="fld"><label class="lbl" for="b_color">Brand colour</label><div class="row"><input type="color" id="b_color" value="${esc(brand.color)}"><span class="code" id="b_hex">${esc(brand.color)}</span></div></div>
+    <div class="fld"><label class="lbl" for="b_email">Contact email</label><input type="email" id="b_email" value="${esc(brand.email)}"></div>
+    <div class="fld"><label class="lbl" for="b_phone">Contact phone</label><input type="tel" id="b_phone" value="${esc(brand.phone)}"></div>
+    <div class="fld"><label class="lbl" for="b_lock">Lock planners this many days before</label><input type="number" id="b_lock" min="0" value="${esc(brand.lockDays)}"></div>
+    <div class="fld full"><label class="lbl" for="b_logo">Logo</label><div class="logo-prev">${brand.logo ? `<img src="${esc(brand.logo)}" alt="Current logo" id="b_prev">` : '<span class="muted" id="b_prev_none">No logo — your initials are shown instead.</span>'}<input type="file" id="b_logo" accept="image/png,image/jpeg,image/svg+xml,image/webp">${brand.logo ? '<button type="button" class="btn sm ghost" data-action="nologo">Remove logo</button>' : ''}</div><span class="help">PNG with a transparent background works best. It’s resized to fit the header.</span></div>
+  </div><div class="row" style="margin-top:14px"><button class="btn primary" type="submit">Save branding</button><button class="btn ghost" type="button" data-action="brand">Close</button><span class="muted" id="b_msg" style="font-size:13px"></span></div></form>`;
+}
+
+/* ---------- saving ---------- */
+function markDirty(k){
+  const top = k.split('.')[0]; if (top.startsWith('_')) return;
+  dirty.add(top); setSave('saving'); clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700);
+}
+function summaryOf(e){
+  return { p1: get(e,'general.p1.name') || '', p2: get(e,'general.p2.name') || '', date: get(e,'general.date') || '', venue: get(e,'venues.ceremony.name') || get(e,'venues.reception.name') || '', guests: get(e,'general.guests') || '', progress: progressOf(e) };
+}
+async function flush(){
+  if (saving || !dirty.size || !db || !evId) return;
+  saving = true;
+  const keys = [...dirty]; dirty.clear();
+  const patch = { summary: summaryOf(ev), updatedAt: new Date().toISOString() }; lastWrite = patch.updatedAt;
+  keys.forEach(k => patch[k] = ev[k]);
+  try { await db.doc('events/' + evId).update(patch); setSave(dirty.size ? 'saving' : 'saved'); }
+  catch (err) { keys.forEach(k => dirty.add(k)); setSave(err && err.code === 'not_granted' ? 'denied' : 'error'); if (!(err && err.code === 'not_granted')) setTimeout(flush, 4000); else dirty.clear(); }
+  saving = false;
+  if (dirty.size) { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 300); }
+}
+function setSave(s){ saveState = s; const el = $('.save'); if (el){ el.className = 'save' + (s === 'error' || s === 'denied' ? ' err' : ''); el.textContent = {saving:'Saving…', saved:'All changes saved', error:'Couldn’t save — check your connection', denied:'View-only access', '':''}[s]; } }
+
+/* ---------- routing ---------- */
+function route(){
+  const m = location.hash.match(/^#plan-([a-z0-9]+)$/i);
+  if (unsubEv && (!m || m[1] !== evId)){ unsubEv(); unsubEv = null; ev = null; evId = null; }
+  if (m){ if (m[1] !== evId) openEvent(m[1]); else renderPlanner(); }
+  else { ev = null; evId = null; renderDash(); }
+}
+function openEvent(id){
+  evId = id; ev = null; section = store.get('djp-sec-' + id) || 'overview'; confirmDel = false; saveState = '';
+  renderTop();
+  $('#app').innerHTML = `<div class="state"><div class="spinner"></div><h2>Opening the planner</h2></div>`;
+  if (!db) return;
+  let timer = setTimeout(() => { if (!ev) $('#app').innerHTML = `<div class="state"><h2>This planner is taking too long to load</h2><p class="muted">Check your connection and reopen the link.</p></div>`; }, 10000);
+  unsubEv = db.doc('events/' + id).onSnapshot(snap => {
+    clearTimeout(timer);
+    if (!snap.exists){ ev = null; $('#app').innerHTML = `<div class="state"><h2>We couldn’t find this planner</h2><p class="muted">The link may be incomplete, or the event was removed. Ask your DJ to send the link again.</p>${isDJ ? '<a class="btn" href="#events">← All events</a>' : ''}</div>`; renderTop(); return; }
+    if (snap.metadata.hasPendingWrites || dirty.size || saving) return;
+    const data = snap.data();
+    if (ev && data.updatedAt && data.updatedAt === lastWrite) return;
+    const first = !ev; ev = Object.assign(blankEvent(), data);
+    if (first) { renderPlanner(); return; }
+    const a = document.activeElement;
+    if (a && a.closest && a.closest('#main') && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { needsRender = true; renderTop(); return; }
+    renderPlanner();
+  }, () => { clearTimeout(timer); $('#app').innerHTML = `<div class="state"><h2>You don’t have access to this planner</h2><p class="muted">Ask your DJ to share it with you, then open the link again.</p></div>`; });
+}
+
+/* ---------- events ---------- */
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'b_color'){ $('#b_hex').textContent = t.value; return; }
+  const k = t.dataset && t.dataset.k; if (!k || !ev) return;
+  let v = t.type === 'checkbox' ? t.checked : t.value;
+  if (k === 'lock.days') v = v === '' ? '' : Number(v);
+  put(ev, k, v); markDirty(k);
+  if (t.dataset.song !== undefined){ const a = t.parentElement.querySelector('.spot'); a.hidden = !v; a.href = v ? spotUrl(v) : '#'; }
+  if (k.startsWith('general.') || k.startsWith('venues.')) renderTop();
+  if (t.type === 'checkbox' && k === 'venues.reception.same') renderMain();
+  if (t.tagName === 'SELECT' && k.startsWith('lock')) { renderBanners(); }
+});
+document.addEventListener('focusout', () => { setTimeout(() => { if (needsRender && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#main') && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) renderPlanner(); }, 50); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset && e.target.dataset.open) location.hash = 'plan-' + e.target.dataset.open; });
+document.addEventListener('click', async e => {
+  const row = e.target.closest('tr[data-open]'); if (row){ location.hash = 'plan-' + row.dataset.open; return; }
+  const b = e.target.closest('[data-action]'); if (!b) return;
+  const a = b.dataset.action, k = b.dataset.k, i = Number(b.dataset.i);
+  if (b.disabled) return;
+  switch (a){
+    case 'yn': put(ev, k, b.dataset.v === 'true'); markDirty(k); renderMain(); break;
+    case 'seg': put(ev, k, get(ev, k) === b.dataset.v && !k.startsWith('lock') ? '' : b.dataset.v); markDirty(k); renderMain(); if (k.startsWith('lock')) renderBanners(); break;
+    case 'add': { const arr = get(ev, k) || []; arr.push({}); put(ev, k, arr); markDirty(k); renderMain(); const rows = document.querySelectorAll('#main .lrow'); const last = [...rows].filter(r => r.querySelector(`[data-k^="${k}."]`)).pop(); last && last.querySelector('input,select') && last.querySelector('input,select').focus(); break; }
+    case 'del': { const arr = get(ev, k); arr.splice(i, 1); markDirty(k); renderMain(); break; }
+    case 'up': case 'down': { const arr = get(ev, k); const j = a === 'up' ? i - 1 : i + 1; [arr[i], arr[j]] = [arr[j], arr[i]]; markDirty(k); renderMain(); break; }
+    case 'preset': { const arr = get(ev, 'timeline.items') || []; TIMELINE_PRESET.forEach(([time, what, notes]) => arr.push({ time, what, notes })); put(ev, 'timeline.items', arr); markDirty('timeline'); renderMain(); break; }
+    case 'sort': { const key = t => { if (!t) return 9999; const [h, m] = t.split(':').map(Number); return (h < 6 ? h + 24 : h) * 60 + m; }; get(ev, 'timeline.items').sort((x, y) => key(x.time) - key(y.time)); markDirty('timeline'); renderMain(); break; }
+    case 'done': put(ev, 'done.' + section, !get(ev, 'done.' + section)); markDirty('done'); renderPlanner(); break;
+    case 'nav': section = b.dataset.s; store.set('djp-sec-' + evId, section); confirmDel = false; renderPlanner(); window.scrollTo({ top: 0 }); break;
+    case 'back': location.hash = 'events'; break;
+    case 'preview': previewCouple = !previewCouple; renderPlanner(); break;
+    case 'copy': { const txt = $('#plancode').textContent; try { await navigator.clipboard.writeText(txt); b.textContent = 'Copied'; } catch { const r = document.createRange(); r.selectNodeContents($('#plancode')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Selected — press Ctrl+C'; } setTimeout(() => b.textContent = 'Copy', 2000); break; }
+    case 'delete': confirmDel = true; renderMain(); break;
+    case 'delete-no': confirmDel = false; renderMain(); break;
+    case 'delete-yes': { const id = evId; if (unsubEv) { unsubEv(); unsubEv = null; } ev = null; evId = null; location.hash = 'events'; try { await db.doc('events/' + id).delete(); } catch {} break; }
+    case 'download': {
+      const names = [get(ev,'general.p1.name'), get(ev,'general.p2.name')].filter(Boolean).join(' & ') || 'Wedding';
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(names)} — Run sheet</title><style>body{font:13px/1.45 -apple-system,Segoe UI,Arial,sans-serif;color:#1c161f;max-width:800px;margin:24px auto;padding:0 20px}h1{font-size:22px;margin:0}h3{font-size:14px;margin:20px 0 6px;padding-bottom:4px;border-bottom:2px solid ${brand.color}}table{border-collapse:collapse;width:100%}td,th{padding:5px 6px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}th{font-size:11px;text-transform:uppercase;color:#666}.k{color:#666;width:30%}.t{white-space:nowrap;width:1%;font-family:Menlo,monospace}.none{color:#888;font-style:italic}p{white-space:pre-wrap;margin:4px 0}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ddd;padding-bottom:12px;margin-bottom:8px}header img{max-height:44px}@media print{body{margin:0}}</style></head><body><header><div><h1>${esc(names)}</h1><div>${esc(fmtD(get(ev,'general.date'), true))}</div></div>${brand.logo ? `<img src="${brand.logo}" alt="">` : `<b>${esc(brand.name)}</b>`}</header>${runSheet(ev)}</body></html>`;
+      try { await downloads.save({ filename: slug(names) + '-run-sheet.html', data: html }); } catch (err) { if (err && err.code !== 'declined') { b.textContent = 'Download unavailable'; } }
+      break; }
+    case 'filter': dashFilter = b.dataset.v; store.set('djp-filter', dashFilter); renderDash(); break;
+    case 'new': showNew = !showNew; showBrand = false; renderDash(); if (showNew) $('#n_p1').focus(); break;
+    case 'brand': showBrand = !showBrand; showNew = false; renderDash(); break;
+    case 'nologo': brand.logo = ''; renderDash(); break;
+  }
+});
+document.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (e.target.id === 'newForm'){
+    const id = uid(); const n = blankEvent();
+    n.general.p1.name = $('#n_p1').value.trim(); n.general.p2.name = $('#n_p2').value.trim(); n.general.date = $('#n_date').value; n.general.guests = $('#n_guests').value; n.venues.ceremony.name = $('#n_venue').value.trim();
+    n.summary = summaryOf(n); n.createdAt = n.updatedAt = new Date().toISOString();
+    const btn = e.target.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Creating…';
+    try { await db.doc('events/' + id).set(n); showNew = false; location.hash = 'plan-' + id; }
+    catch { btn.disabled = false; btn.textContent = 'Create planner'; btn.insertAdjacentHTML('afterend', '<span class="muted" style="color:var(--danger)">Couldn’t create the event. Check your connection and try again.</span>'); }
+  }
+  if (e.target.id === 'brandForm'){
+    const f = $('#b_logo').files[0];
+    if (f) brand.logo = await shrinkLogo(f);
+    Object.assign(brand, { name: $('#b_name').value.trim() || 'Your DJ Company', tagline: $('#b_tag').value.trim(), color: $('#b_color').value, email: $('#b_email').value.trim(), phone: $('#b_phone').value.trim(), lockDays: Number($('#b_lock').value) || 0 });
+    try { await db.doc('settings/brand').set(brand); applyBrand(); showBrand = false; renderDash(); }
+    catch { $('#b_msg').textContent = 'Couldn’t save branding. Only editors of this artifact can change it.'; }
+  }
+});
+function shrinkLogo(file){
+  return new Promise(res => {
+    const fr = new FileReader();
+    fr.onload = () => { const img = new Image(); img.onload = () => { const s = Math.min(1, 480 / img.width, 160 / img.height); const c = document.createElement('canvas'); c.width = Math.round(img.width * s) || 1; c.height = Math.round(img.height * s) || 1; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/png')); }; img.onerror = () => res(brand.logo); img.src = fr.result; };
+    fr.onerror = () => res(brand.logo); fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- boot ---------- */
+applyBrand(); renderTop();
+(async () => {
+  const cl = window.claude;
+  if (!cl || !cl.use){ $('#app').innerHTML = `<div class="state"><h2>Open this planner on claude.ai</h2><p class="muted">Saving answers needs the claude.ai viewer. Open the shared link while signed in.</p></div>`; return; }
+  const [d, u, dl] = await Promise.all([cl.use('db'), cl.use('user'), cl.use('downloads')]);
+  db = d; downloads = dl;
+  try { isDJ = u ? await u.canEdit() : false; } catch { isDJ = false; }
+  if (!db){ $('#app').innerHTML = `<div class="state"><h2>Sign in to open your planner</h2><p class="muted">Your answers are saved to your claude.ai account. Sign in, then open the link again.</p></div>`; renderTop(); return; }
+  db.doc('settings/brand').onSnapshot(s => { if (s.exists){ brand = Object.assign(brand, s.data()); applyBrand(); if (ev && evId) renderTop(); else if (!showBrand && !showNew) renderDash(); } }, () => {});
+  if (isDJ){
+    let t = setTimeout(() => { if (!eventsLoaded){ eventsLoaded = true; if (!evId) renderDash(); } }, 10000);
+    unsubEvents = db.collection('events').onSnapshot(s => { clearTimeout(t); events = s.docs.map(x => Object.assign({ _id: x.id }, x.data())); eventsLoaded = true; if (!evId && !showNew && !showBrand) renderDash(); }, () => { clearTimeout(t); eventsLoaded = true; if (!evId) renderDash(); });
+  }
+  window.addEventListener('hashchange', route);
+  route();
+})();
+})();
+</script>
+
+</body>
+</html>
