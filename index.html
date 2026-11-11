@@ -462,13 +462,27 @@ R.ceremony = () => {
       M('ceremony.rec','Recessional','Your exit as a married couple.', F('ceremony.rec.song','Recessional song','song')+F('ceremony.rec.notes','Notes')));
 };
 R.cocktail = () => card('Cocktail hour', M('cocktail','Cocktail music','', F('cocktail.where','Location','text',{ph:'Patio, foyer…'})+F('cocktail.style','Style','select',{opts:['Jazz & swing','Acoustic covers','Lounge & chill','Upbeat pop','Soul & Motown','Our own playlist']})+F('cocktail.start','Starts','time')+F('cocktail.end','Ends','time')+F('cocktail.games','Lawn games or activities','text',{full:true})+F('cocktail.notes','Notes','textarea',{full:true,rows:2})));
+const EMODES = ['One song for the whole party', 'A song for each group', 'A song for each person or pair'];
+const EGROUPS = ['Parents of the couple', 'Grandparents', 'Flower girl & ring bearer', 'Bridesmaids & groomsmen', 'Maid of honour & best man'];
 R.entrance = () => {
   const on = get(ev, 'entrance.on');
-  return card('Grand entrance', `<div class="mhead"><div><h4>Would you like a grand entrance?</h4><p class="muted">Your MC or DJ introduces you into the reception.</p></div>${yn('entrance.on')}</div>` +
-    (on ? `<div class="grid" style="margin-top:14px">${F('entrance.style','Format','select',{opts:['Wedding party, then the couple','Couple only','Everyone together, one song'],full:true})}${F('entrance.partySong','Wedding party song','song')}${F('entrance.coupleSong','Couple’s entrance song','song')}${F('entrance.intro','How should we introduce you?','text',{full:true,ph:'e.g. For the first time as husband and wife, Mr. & Mrs. …'})}</div>` : '')) +
-    (on ? card('Introduction order', L('entrance.intros', [
-      { k: 'names', l: 'Names', ph: 'e.g. Maya Chen & Liam Ortiz' }, { k: 'role', l: 'Role', ph: 'Maid of honour & best man' }, { k: 'say', l: 'Pronunciation', ph: 'MY-uh', w: 'minmax(0,.8fr)' }, { k: 'song', l: 'Own song (optional)', t: 'song' }
-    ], { numbered: true, add: 'Add pair', empty: 'Add each pair or person in the order they walk in.' }), 'In walk-in order') : '');
+  const head = `<div class="mhead"><div><h4>Would you like a grand entrance?</h4><p class="muted">Your MC or DJ introduces you into the reception.</p></div>${yn('entrance.on')}</div>`;
+  if (!on) return card('Grand entrance', head);
+  const coupleOnly = get(ev, 'entrance.style') === 'Couple only';
+  const mode = get(ev, 'entrance.songMode') || EMODES[0];
+  let h = card('Grand entrance', head + `<div class="grid" style="margin-top:14px">${F('entrance.style','Format','select',{opts:['Wedding party, then the couple','Couple only','Everyone together, one song'],full:true})}${F('entrance.coupleSong','Couple’s entrance song','song')}${F('entrance.intro','How should we introduce you?','text',{ph:'e.g. For the first time as a married couple…'})}</div>`);
+  if (coupleOnly) return h;
+  let music = `<div class="fld"><span class="lbl">How should the wedding party’s music work?</span>${seg('entrance.songMode', EMODES, mode)}</div>`;
+  if (mode === EMODES[0]) music += `<div class="grid" style="margin-top:12px">${F('entrance.partySong','Wedding party song','song',{help:'One song plays while everyone in the list below is introduced.'})}</div>`;
+  else if (mode === EMODES[1]) music += `<p class="help" style="margin:12px 0 8px">List the groups in the order they walk in and pick a song for each. Then choose a group for each person or pair below.</p>` + L('entrance.groups', [{ k: 'name', l: 'Group', ph: 'e.g. Parents of the couple' }, { k: 'song', l: 'Song', t: 'song' }], { numbered: true, add: 'Add group', empty: 'No groups yet. Add your own, or start with the typical ones.', extra: '<button type="button" class="btn sm" data-action="egroups">Add typical groups</button>' });
+  else music += `<p class="help" style="margin-top:12px">Pick a song for each person or pair in the introduction list below.</p>`;
+  h += card('Wedding party music', music);
+  const groups = (get(ev, 'entrance.groups') || []).map(g => g.name).filter(Boolean);
+  const cols = [{ k: 'names', l: 'Names', ph: 'e.g. Maya Chen & Liam Ortiz' }, { k: 'role', l: 'Role', ph: 'Maid of honour & best man' }, { k: 'say', l: 'Pronunciation', ph: 'MY-uh', w: 'minmax(0,.8fr)' }];
+  if (mode === EMODES[1]) cols.push({ k: 'group', l: 'Group', t: 'select', opts: groups, none: groups.length ? 'Choose group…' : 'Add groups first' });
+  if (mode === EMODES[2]) cols.push({ k: 'song', l: 'Song', t: 'song' });
+  h += card('Introduction order', L('entrance.intros', cols, { numbered: true, add: 'Add person or pair', empty: 'Add each person or pair in the order they walk in.' }), 'In walk-in order');
+  return h;
 };
 R.dinner = () => card('Dinner service', `<div class="grid g3">${F('dinner.style','Dinner style','select',{opts:['Plated / individually served','Family style','Buffet','Food stations']})}${F('dinner.start','Dinner starts','time')}${F('dinner.djMeal','Meal provided for DJ','select',{opts:['Yes','No']})}</div><div class="grid" style="margin-top:12px">${F('dinner.music','Dinner music','select',{opts:['Soft jazz & acoustic','Classic love songs','Soul & Motown','Mellow current hits','Our own playlist']})}${F('dinner.order','Table release order','text',{ph:'e.g. Head table, then by table number'})}${F('dinner.notes','Notes','textarea',{full:true,rows:2,ph:'e.g. Keep it soft; quiet background for conversation'})}</div>`) +
   card('Blessing', M('dinner.blessing','Blessing or grace before the meal','', F('dinner.blessing.by','Given by')+F('dinner.blessing.notes','Notes')));
@@ -520,7 +534,16 @@ function runSheet(e){
     if (g('ceremony.rec.on')) add('Recessional', '', g('ceremony.rec.song'), g('ceremony.rec.notes'));
   }
   if (g('cocktail.on')) add('Cocktail hour', g('cocktail.where'), g('cocktail.style'), [fmtT(g('cocktail.start')), fmtT(g('cocktail.end'))].filter(Boolean).join(' – '));
-  if (g('entrance.on')) { add('Grand entrance — party', g('entrance.style'), g('entrance.partySong'), ''); add('Grand entrance — couple', g('entrance.intro'), g('entrance.coupleSong'), ''); }
+  const emode = g('entrance.songMode') || EMODES[0], eCoupleOnly = g('entrance.style') === 'Couple only';
+  if (g('entrance.on')) {
+    const ins = g('entrance.intros') || [];
+    if (!eCoupleOnly){
+      if (emode === EMODES[1]) (g('entrance.groups') || []).forEach(gr => add('Entrance — ' + (gr.name || 'Group'), ins.filter(r => r.group && r.group === gr.name).map(r => r.names).filter(Boolean).join('; '), gr.song, ''));
+      else if (emode === EMODES[2]) add('Grand entrance — party', g('entrance.style'), '', 'Individual songs — see Introductions');
+      else add('Grand entrance — party', g('entrance.style'), g('entrance.partySong'), '');
+    }
+    add('Grand entrance — couple', g('entrance.intro'), g('entrance.coupleSong'), '');
+  }
   add('Dinner', g('dinner.style'), g('dinner.music'), [g('dinner.djMeal') && 'DJ meal: ' + g('dinner.djMeal'), g('dinner.notes')].filter(Boolean).join('; '));
   if (g('dinner.blessing.on')) add('Blessing', g('dinner.blessing.by'), '', g('dinner.blessing.notes'));
   if (g('speeches.toast.on')) add('Toast', g('speeches.toast.by'), '', g('speeches.toast.notes'));
@@ -528,8 +551,8 @@ function runSheet(e){
   Object.entries(dn).forEach(([k, l]) => { if (g(`dances.${k}.on`)) add(l, g(`dances.${k}.who`) || g(`dances.${k}.when`), g(`dances.${k}.song`), [g(`dances.${k}.edit`), g(`dances.${k}.notes`)].filter(Boolean).join('; ')); });
   (g('dances.extra') || []).forEach(r => add('Special dance', r.who, r.song, r.when));
   h += `<h3>Music cues</h3><div class="rs-scroll"><table><thead><tr><th>Moment</th><th>Who / details</th><th>Song</th><th>Notes</th></tr></thead><tbody>${cues.map(c => `<tr><td><b>${esc(c[0])}</b></td><td>${v(c[1])}</td><td>${v(c[2])}</td><td>${v(c[3])}</td></tr>`).join('')}</tbody></table></div>`;
-  const intros = g('entrance.on') ? (g('entrance.intros') || []) : [];
-  if (intros.length) h += `<h3>Introductions (in order)</h3><table><tbody>${intros.map((r, i) => `<tr><td class="t">${i + 1}</td><td><b>${esc(r.names)}</b>${r.say ? ` <i>(${esc(r.say)})</i>` : ''}</td><td>${v(r.role)}</td><td>${v(r.song)}</td></tr>`).join('')}</tbody></table>`;
+  const intros = g('entrance.on') && !eCoupleOnly ? (g('entrance.intros') || []) : [];
+  if (intros.length) h += `<h3>Introductions (in order)</h3><table><tbody>${intros.map((r, i) => `<tr><td class="t">${i + 1}</td><td><b>${esc(r.names)}</b>${r.say ? ` <i>(${esc(r.say)})</i>` : ''}</td><td>${v(r.role)}</td>${emode === EMODES[1] ? `<td>${v(r.group)}</td>` : emode === EMODES[2] ? `<td>${v(r.song)}</td>` : ''}</tr>`).join('')}</tbody></table>`;
   const sp = g('speeches.speakers') || [];
   h += `<h3>Speeches</h3>` + kv([['MC', [g('speeches.mc'), g('speeches.mcNames')].filter(Boolean).join(' — ')], ['When', g('speeches.when')], ['Length', g('speeches.length')]]) + (sp.length ? `<table><tbody>${sp.map((r, i) => `<tr><td class="t">${i + 1}</td><td><b>${esc(r.name)}</b></td><td>${v(r.rel)}</td><td>${v(r.mic)}</td><td>${v(r.song)}</td></tr>`).join('')}</tbody></table>` : '');
   const trad = TRADITIONS.filter(t => g('traditions.items.' + slug(t)));
@@ -704,8 +727,10 @@ document.addEventListener('input', e => {
   if (t.dataset.song !== undefined){ const a = t.parentElement.querySelector('.spot'); a.hidden = !v; a.href = v ? spotUrl(v) : '#'; }
   if (k.startsWith('general.') || k.startsWith('venues.')) renderTop();
   if (t.type === 'checkbox' && k === 'venues.reception.same') renderMain();
+  if (k === 'entrance.style') renderMain();
   if (t.tagName === 'SELECT' && k.startsWith('lock')) { renderBanners(); }
 });
+document.addEventListener('change', e => { const k = e.target.dataset && e.target.dataset.k; if (k && /^entrance\.groups\.\d+\.name$/.test(k)) renderMain(); });
 document.addEventListener('focusout', () => { setTimeout(() => { if (needsRender && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#main') && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) renderPlanner(); }, 50); });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset && e.target.dataset.open) location.hash = 'plan-' + e.target.dataset.open; });
 document.addEventListener('click', async e => {
@@ -715,10 +740,11 @@ document.addEventListener('click', async e => {
   if (b.disabled) return;
   switch (a){
     case 'yn': put(ev, k, b.dataset.v === 'true'); markDirty(k); renderMain(); break;
-    case 'seg': put(ev, k, get(ev, k) === b.dataset.v && !k.startsWith('lock') ? '' : b.dataset.v); markDirty(k); renderMain(); if (k.startsWith('lock')) renderBanners(); break;
+    case 'seg': put(ev, k, get(ev, k) === b.dataset.v && !k.startsWith('lock') && k !== 'entrance.songMode' ? '' : b.dataset.v); markDirty(k); renderMain(); if (k.startsWith('lock')) renderBanners(); break;
     case 'add': { const arr = get(ev, k) || []; arr.push({}); put(ev, k, arr); markDirty(k); renderMain(); const rows = document.querySelectorAll('#main .lrow'); const last = [...rows].filter(r => r.querySelector(`[data-k^="${k}."]`)).pop(); last && last.querySelector('input,select') && last.querySelector('input,select').focus(); break; }
     case 'del': { const arr = get(ev, k); arr.splice(i, 1); markDirty(k); renderMain(); break; }
     case 'up': case 'down': { const arr = get(ev, k); const j = a === 'up' ? i - 1 : i + 1; [arr[i], arr[j]] = [arr[j], arr[i]]; markDirty(k); renderMain(); break; }
+    case 'egroups': { const arr = get(ev, 'entrance.groups') || []; EGROUPS.forEach(name => arr.push({ name })); put(ev, 'entrance.groups', arr); markDirty('entrance'); renderMain(); break; }
     case 'preset': { const arr = get(ev, 'timeline.items') || []; TIMELINE_PRESET.forEach(([time, what, notes]) => arr.push({ time, what, notes })); put(ev, 'timeline.items', arr); markDirty('timeline'); renderMain(); break; }
     case 'sort': { const key = t => { if (!t) return 9999; const [h, m] = t.split(':').map(Number); return (h < 6 ? h + 24 : h) * 60 + m; }; get(ev, 'timeline.items').sort((x, y) => key(x.time) - key(y.time)); markDirty('timeline'); renderMain(); break; }
     case 'done': put(ev, 'done.' + section, !get(ev, 'done.' + section)); markDirty('done'); renderPlanner(); break;
