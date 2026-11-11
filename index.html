@@ -209,7 +209,7 @@ input[type=color]{width:48px;height:36px;border:1px solid var(--line-2);border-r
 
 /* Phones */
 @media (max-width:860px){
-  .top{position:static}
+  .top{position:relative}
   .top-in{gap:8px 14px}
   .top-mid{order:5;flex-basis:100%}
   .brand-tag{display:none}
@@ -232,6 +232,35 @@ input[type=color]{width:48px;height:36px;border:1px solid var(--line-2);border-r
   .card{padding:16px}
   .sec-head h2{font-size:24px}
 }
+
+/* DJ stage backdrop: spotlight beams, a spinning record, and an equalizer, all behind solid cards */
+:root{--beam-a:color-mix(in oklab,var(--brand) 22%,transparent);--beam-b:rgba(70,120,255,.10);--beam-c:rgba(255,170,60,.08);--groove:color-mix(in oklab,var(--fg) 8%,transparent);--disc:color-mix(in oklab,var(--fg) 4%,transparent);--eq:color-mix(in oklab,var(--brand) 26%,transparent);--stage-bg:radial-gradient(120% 70% at 50% -10%,color-mix(in oklab,var(--brand) 10%,var(--bg)),var(--bg) 70%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--beam-a:color-mix(in oklab,var(--brand) 50%,transparent);--beam-b:rgba(80,140,255,.20);--beam-c:rgba(255,170,60,.12);--groove:rgba(255,255,255,.06);--disc:rgba(255,255,255,.025);--eq:color-mix(in oklab,var(--brand) 60%,transparent);--stage-bg:radial-gradient(120% 70% at 50% -10%,color-mix(in oklab,var(--brand) 26%,#0d0a0f),#0d0a0f 70%)}}
+:root[data-theme="dark"]{--beam-a:color-mix(in oklab,var(--brand) 50%,transparent);--beam-b:rgba(80,140,255,.20);--beam-c:rgba(255,170,60,.12);--groove:rgba(255,255,255,.06);--disc:rgba(255,255,255,.025);--eq:color-mix(in oklab,var(--brand) 60%,transparent);--stage-bg:radial-gradient(120% 70% at 50% -10%,color-mix(in oklab,var(--brand) 26%,#0d0a0f),#0d0a0f 70%)}
+body{background:var(--bg)}
+.stage{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:var(--stage-bg)}
+#app,#banners,.wrap:not(.top){position:relative;z-index:1}
+.beam{position:absolute;top:-8vh;width:46vmax;height:130vh;transform-origin:50% 0;clip-path:polygon(46% 0,54% 0,100% 100%,0 100%);opacity:.95}
+.beam.b1{left:-6vmax;background:linear-gradient(to bottom,var(--beam-a),transparent 78%);animation:swayL 16s ease-in-out infinite alternate}
+.beam.b2{right:-6vmax;background:linear-gradient(to bottom,var(--beam-b),transparent 78%);animation:swayR 19s ease-in-out infinite alternate}
+.beam.b3{left:calc(50% - 23vmax);background:linear-gradient(to bottom,var(--beam-c),transparent 70%);animation:swayC 23s ease-in-out infinite alternate}
+@keyframes swayL{from{transform:rotate(-34deg)}to{transform:rotate(-16deg)}}
+@keyframes swayR{from{transform:rotate(32deg)}to{transform:rotate(14deg)}}
+@keyframes swayC{from{transform:rotate(-8deg)}to{transform:rotate(9deg)}}
+.vinyl{position:absolute;right:-16vmax;bottom:-16vmax;width:52vmax;aspect-ratio:1;max-width:none;border-radius:50%;
+  background:
+    radial-gradient(circle,var(--bg) 0 1.2%,var(--beam-a) 1.3% 12%,transparent 12.3%),
+    conic-gradient(from 0deg,transparent 0 10%,var(--groove) 14%,transparent 20% 55%,var(--groove) 60%,transparent 66%),
+    repeating-radial-gradient(circle,var(--groove) 0 1px,transparent 1.5px 7px),
+    var(--disc);
+  animation:spin 9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.eq{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;gap:3px;align-items:flex-end;padding:0 4px;opacity:.9;
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent)}
+.eq i{flex:1;height:100%;border-radius:2px 2px 0 0;background:linear-gradient(to top,var(--eq),transparent);transform-origin:bottom;animation:eq var(--d,1.2s) ease-in-out var(--dl,0s) infinite alternate}
+@keyframes eq{from{transform:scaleY(var(--lo,.15))}to{transform:scaleY(var(--hi,.8))}}
+@media (prefers-reduced-motion:reduce){.beam,.vinyl,.eq i{animation:none}.eq i{transform:scaleY(var(--hi,.5))}}
+@media (max-width:860px){.top{z-index:20}.vinyl{width:70vmax;right:-30vmax;bottom:-24vmax}.eq{height:70px}}
 </style>
 <style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 <script>/* Standalone demo shim: stores planner data in this browser (localStorage) instead of a server. */
@@ -264,7 +293,9 @@ input[type=color]{width:48px;height:36px;border:1px solid var(--line-2);border-r
 })();
 </script>
 </head>
-<body>
+<body><div class="stage" aria-hidden="true"><div class="beam b1"></div><div class="beam b3"></div><div class="beam b2"></div><div class="vinyl"></div><div class="eq" id="eqBars"></div></div>
+<script>(function(){var e=document.getElementById('eqBars'),h='';for(var i=0;i<56;i++){var r=Math.random;h+='<i style="--d:'+(0.6+r()*1.1).toFixed(2)+'s;--dl:-'+(r()*2).toFixed(2)+'s;--lo:'+(0.08+r()*0.2).toFixed(2)+';--hi:'+(0.45+r()*0.55).toFixed(2)+'"></i>';}e.innerHTML=h;})();</script>
+
 
 <header class="top wrap" id="top"><div class="top-in" id="topIn">
   <div class="brand"><div class="mark">DJ</div><div><div class="brand-name">Wedding DJ Planner</div></div></div>
@@ -569,7 +600,7 @@ function djPanel(){
   const code = '#plan-' + evId;
   return `<section class="card dj"><h3>DJ controls <span class="muted">Only you see this panel</span></h3>
   <div class="grid">
-    <div class="fld"><span class="lbl">Couple’s planner link</span><div class="row"><span class="code" id="plancode">${esc(code)}</span><button type="button" class="btn sm" data-action="copy">Copy</button></div><span class="help">Share this artifact with the couple, then send them its link with this ending added.</span></div>
+    <div class="fld"><span class="lbl">Couple’s planner link</span><div class="row"><span class="code" id="plancode">${esc(code)}</span><button type="button" class="btn sm" data-action="copy">Copy</button></div><span class="help">Send the couple this page’s web address with this ending added.</span></div>
     <div class="fld"><span class="lbl">Couple editing</span>${seg('lock.mode', ['auto','locked','open'], mode).replace(/>auto</,'>Auto-lock<').replace(/>locked</,'>Locked now<').replace(/>open</,'>Always open<')}${mode === 'auto' ? `<div class="row" style="margin-top:6px"><label class="help" for="${fid('lock.days')}">Lock this many days before:</label><input type="number" id="${fid('lock.days')}" data-k="lock.days" value="${esc(get(ev,'lock.days') ?? brand.lockDays)}" min="0" style="width:80px"></div>` : ''}</div>
   </div>
   <div class="row" style="margin-top:14px"><button type="button" class="btn sm" data-action="preview">Preview as couple</button><button type="button" class="btn sm" data-action="nav" data-s="runsheet">Open run sheet</button>${confirmDel ? `<span class="muted" style="font-size:13px">Delete this event and all its answers?</span><button type="button" class="btn sm danger" data-action="delete-yes">Yes, delete</button><button type="button" class="btn sm ghost" data-action="delete-no">Cancel</button>` : `<button type="button" class="btn sm ghost danger" data-action="delete">Delete event</button>`}</div></section>`;
